@@ -1,0 +1,84 @@
+.viewWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.editBtn:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-accent);
+}
+
+.editWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+  background: var(--color-surface);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.iconBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: transparent;
+}
+
+.iconBtn.save {
+  color: var(--color-success);
+}
+
+.iconBtn.save:hover {
+  background: var(--color-success-soft);
+}
+
+.iconBtn.cancel {
+  color: var(--color-text-muted);
+}
+
+.iconBtn.cancel:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}

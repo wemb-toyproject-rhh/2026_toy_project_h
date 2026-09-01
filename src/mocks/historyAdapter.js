@@ -191,6 +191,14 @@ export function getEntryById(id) {
   return historyEntries.find((entry) => entry.id === id) ?? null;
 }
 
+// Mock stand-in for PUT /api/history/:id/metadata — mutates the shared
+// entry in place so the new title is visible from list/detail/compare
+// alike for the rest of the session.
+export function updateEntryTitle(id, title) {
+  const entry = getEntryById(id);
+  if (entry) entry.title = title;
+}
+
 export function getTabContent(entry, primaryId, subId) {
   if (!entry) return "";
   if (primaryId === "css") return entry.cssCode ?? "";

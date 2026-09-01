@@ -78,6 +78,44 @@ const ICONS = {
       strokeLinejoin="round"
     />
   ),
+  pencil: (
+    <>
+      <path
+        d="M11.3 2.3a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-7.6 7.6-3 .9.9-3 7.3-7.3Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.7 3.9 12.1 6.3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+    </>
+  ),
+  check: (
+    <path
+      d="M3 8.3 6.2 11.5 13 4.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
+  close: (
+    <path
+      d="M4 4l8 8M12 4l-8 8"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    />
+  ),
   trash: (
     <>
       <path d="M3 4.5h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />

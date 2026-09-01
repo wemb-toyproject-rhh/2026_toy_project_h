@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useReducer, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { filterEntriesByTarget, historyEntries } from "../mocks/historyAdapter.js";
+import { filterEntriesByTarget, historyEntries, updateEntryTitle } from "../mocks/historyAdapter.js";
 import PRCard from "../components/history/PRCard.jsx";
 import Button from "../components/common/Button.jsx";
 import styles from "./HistoryListPage.module.css";
@@ -9,6 +9,12 @@ export default function HistoryListPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [, forceRerender] = useReducer((n) => n + 1, 0);
+
+  const handleRenameTitle = (id, newTitle) => {
+    updateEntryTitle(id, newTitle);
+    forceRerender();
+  };
 
   const targetId = searchParams.get("target");
   const entries = filterEntriesByTarget(targetId);
@@ -68,6 +74,7 @@ export default function HistoryListPage() {
             selected={selectedIds.includes(item.id)}
             selectionDisabled={selectedIds.length >= 2}
             onToggleSelect={toggleSelect}
+            onRenameTitle={handleRenameTitle}
           />
         ))}
       </div>

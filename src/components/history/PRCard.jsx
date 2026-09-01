@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import Badge from "../common/Badge.jsx";
 import Button from "../common/Button.jsx";
 import Icon from "../common/Icon.jsx";
+import EditableTitle from "../common/EditableTitle.jsx";
 import styles from "./PRCard.module.css";
 
 export default function PRCard({
@@ -9,6 +10,7 @@ export default function PRCard({
   selected = false,
   selectionDisabled = false,
   onToggleSelect,
+  onRenameTitle,
 }) {
   const navigate = useNavigate();
   const toggleBlocked = !selected && selectionDisabled;
@@ -61,7 +63,11 @@ export default function PRCard({
             }}
           >
             <Badge tone={selected ? "accent" : "neutral"}>{item.targetLabel}</Badge>
-            <span className={styles.title}>{item.title}</span>
+            <EditableTitle
+              value={item.title}
+              className={styles.title}
+              onSave={(newTitle) => onRenameTitle?.(item.id, newTitle)}
+            />
           </div>
 
           <div className={styles.rightGroup}>
