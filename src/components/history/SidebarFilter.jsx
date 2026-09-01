@@ -1,11 +1,13 @@
-import mockHistory from "../../mocks/mockHistory.json";
+import { buildTargetSummaries } from "../../mocks/historyAdapter.js";
 import styles from "./SidebarFilter.module.css";
 
 export default function SidebarFilter() {
+  const targets = buildTargetSummaries();
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.list}>
-        {mockHistory.targets.map((target, index) => (
+        {targets.map((target, index) => (
           <div
             key={target.id}
             className={`${styles.item} ${index === 0 ? styles.active : ""}`}

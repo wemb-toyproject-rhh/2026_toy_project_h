@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import mockHistory from "../mocks/mockHistory.json";
+import { historyEntries } from "../mocks/historyAdapter.js";
 import PRCard from "../components/history/PRCard.jsx";
 import Button from "../components/common/Button.jsx";
 import styles from "./HistoryListPage.module.css";
@@ -37,7 +37,7 @@ export default function HistoryListPage() {
       </div>
 
       <div className={styles.list}>
-        {mockHistory.history.map((item) => (
+        {historyEntries.map((item) => (
           <PRCard
             key={item.id}
             item={item}

@@ -34,7 +34,7 @@ export default function PRCard({
       <div className={styles.body}>
         <div className={styles.topRow}>
           <div className={styles.titleGroup}>
-            <Badge tone={selected ? "accent" : "neutral"}>PR #{item.id}</Badge>
+            <Badge tone={selected ? "accent" : "neutral"}>{item.targetLabel}</Badge>
             <span className={styles.title}>{item.title}</span>
           </div>
           <Button
@@ -47,16 +47,17 @@ export default function PRCard({
         </div>
 
         <div className={styles.meta}>
-          작성자 {item.author} · 저장 {item.savedAt}
+          {item.author ? `작성자 ${item.author} · ` : ""}
+          저장 {item.savedAt}
+          {item.version ? ` · v${item.version}` : ""}
         </div>
 
-        {item.changes?.length > 0 && (
+        {item.changedPaths?.length > 0 && (
           <div className={styles.changes}>
-            {item.changes.map((change, idx) => (
+            {item.changedPaths.map((path, idx) => (
               <div key={idx} className={styles.changeRow}>
                 <span className={styles.dot} />
-                <strong>{change.target}</strong>
-                <span className={styles.changePath}>{change.path}</span>
+                <span className={styles.changePath}>{path}</span>
               </div>
             ))}
           </div>

@@ -1,5 +1,7 @@
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import mockHistory from "../mocks/mockHistory.json";
+import { getEntryById, getPrevTabContent, getTabContent } from "../mocks/historyAdapter.js";
+import { computeDiff } from "../utils/diff.js";
 import Badge from "../components/common/Badge.jsx";
 import Button from "../components/common/Button.jsx";
 import BackLink from "../components/common/BackLink.jsx";
@@ -8,36 +10,27 @@ import SubTabGroup from "../components/detail/SubTabGroup.jsx";
 import DiffBlock from "../components/common/DiffBlock.jsx";
 import styles from "./HistoryDetailPage.module.css";
 
-const NOTE = {
-  summary:
-    "beforeLoad 라이프사이클 내 HDRI 로딩 지연 현상을 처리하고 Promise 캐시를 적용해 화면 전환 시 중복 로딩을 방지했습니다.",
-  raw: "- beforeLoad 라이프사이클 내 HDRI 로딩 지연 현상 처리.\n- Promise 캐시 구조 적용하여 화면 전환 시 중복 로딩 방지.",
-};
-
-const PRIMARY_TABS = [
-  { id: "css", label: "CSS", modified: false },
-  { id: "js", label: "JAVASCRIPT", modified: true },
-];
-
-const LIFECYCLES = [
-  { id: "beforeLoad", label: "beforeLoad", modified: true },
-  { id: "loaded", label: "loaded", modified: false },
-  { id: "beforeUnLoad", label: "beforeUnLoad", modified: false },
-];
-
-const DIFF_LINES = [
-  { no: 18, type: null, code: "var HDRI_PATH = '/renobit/output/resource/hdr/...';" },
-  { no: 19, type: "del", code: "var INTRO_GLTF_PRELOAD_PATHS = [ 'old/path.gltf' ];" },
-  { no: 19, type: "add", code: "var INTRO_GLTF_PRELOAD_PATHS = [" },
-  { no: 20, type: "add", code: "  '/output/resource/gltf/d3487c89.../statcom_BD.gltf'" },
-  { no: 21, type: "add", code: "];" },
-  { no: 22, type: null, code: "var INTRO_GLTF_LOADER_RETRY_MS = 100;" },
-];
-
 export default function HistoryDetailPage() {
   const { id } = useParams();
-  const item =
-    mockHistory.history.find((h) => String(h.id) === id) ?? mockHistory.history[0];
+  const entry = getEntryById(id) ?? getEntryById("page-29");
+
+  const [activePrimaryId, setActivePrimaryId] = useState(
+    entry.primaryTabs.find((tab) => tab.hasSubTabs)?.id ?? entry.primaryTabs[0]?.id,
+  );
+  const [activeSubId, setActiveSubId] = useState(
+    entry.lifecycles.find((lc) => lc.modified)?.id ?? entry.lifecycles[0]?.id,
+  );
+
+  const diffLines = useMemo(() => {
+    const current = getTabContent(entry, activePrimaryId, activeSubId);
+    const prev = getPrevTabContent(entry, activePrimaryId, activeSubId);
+    return computeDiff(prev, current).unified;
+  }, [entry, activePrimaryId, activeSubId]);
+
+  const note = {
+    summary: entry.comment || "작성된 비고가 없습니다.",
+    raw: entry.comment ?? "",
+  };
 
   return (
     <div className={styles.page}>
@@ -45,21 +38,25 @@ export default function HistoryDetailPage() {
 
       <div className={styles.header}>
         <div className={styles.titleGroup}>
-          <Badge tone="accent">PR #{item.id}</Badge>
-          <strong className={styles.title}>{item.title}</strong>
+          <Badge tone="accent">{entry.targetLabel}</Badge>
+          <strong className={styles.title}>{entry.title}</strong>
         </div>
         <Button variant="primary">전체 스크립트 복사</Button>
       </div>
 
-      <ConversationPanel note={NOTE} />
+      <ConversationPanel note={note} />
 
       <SubTabGroup
-        targetLabel="[Page: main]"
-        primaryTabs={PRIMARY_TABS}
-        lifecycles={LIFECYCLES}
+        targetLabel={entry.targetLabel}
+        primaryTabs={entry.primaryTabs}
+        lifecycles={entry.lifecycles}
+        activePrimaryId={activePrimaryId}
+        activeSubId={activeSubId}
+        onPrimaryChange={setActivePrimaryId}
+        onSubChange={setActiveSubId}
       />
 
-      <DiffBlock lines={DIFF_LINES} />
+      <DiffBlock lines={diffLines} />
     </div>
   );
 }

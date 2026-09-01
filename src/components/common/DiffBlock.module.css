@@ -1,7 +1,4 @@
 .diff {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
   background: var(--color-surface-sunken);
   border-radius: var(--radius-sm);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;

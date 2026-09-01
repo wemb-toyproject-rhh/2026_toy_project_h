@@ -1,17 +1,16 @@
-import { useState } from "react";
 import styles from "./SubTabGroup.module.css";
 
 export default function SubTabGroup({
   targetLabel,
-  primaryTabs = [],
+  primaryTabs,
   lifecycles,
+  activePrimaryId,
+  activeSubId,
+  onPrimaryChange,
+  onSubChange,
 }) {
-  const [activePrimary, setActivePrimary] = useState(
-    primaryTabs.find((t) => t.modified)?.id ?? primaryTabs[0]?.id,
-  );
-  const [activeSub, setActiveSub] = useState(
-    lifecycles.find((l) => l.modified)?.id ?? lifecycles[0]?.id,
-  );
+  const activePrimaryTab = primaryTabs.find((tab) => tab.id === activePrimaryId);
+  const showSubTabs = Boolean(activePrimaryTab?.hasSubTabs);
 
   return (
     <div className={styles.group}>
@@ -24,13 +23,26 @@ export default function SubTabGroup({
         </span>
       </div>
 
-      {primaryTabs.length > 0 && (
-        <div className={styles.primaryTabs}>
-          {primaryTabs.map((tab) => (
+      <div className={styles.primaryTabs}>
+        {primaryTabs.map((tab) => (
+          <button
+            key={tab.id}
+            className={`${styles.primaryTab} ${activePrimaryId === tab.id ? styles.active : ""}`}
+            onClick={() => onPrimaryChange(tab.id)}
+          >
+            {tab.label}
+            {tab.modified && <span className={styles.dot} />}
+          </button>
+        ))}
+      </div>
+
+      {showSubTabs && (
+        <div className={styles.subTabs}>
+          {lifecycles.map((tab) => (
             <button
               key={tab.id}
-              className={`${styles.primaryTab} ${activePrimary === tab.id ? styles.active : ""}`}
-              onClick={() => setActivePrimary(tab.id)}
+              className={`${styles.subTab} ${activeSubId === tab.id ? styles.active : ""}`}
+              onClick={() => onSubChange(tab.id)}
             >
               {tab.label}
               {tab.modified && <span className={styles.dot} />}
@@ -38,19 +50,6 @@ export default function SubTabGroup({
           ))}
         </div>
       )}
-
-      <div className={styles.subTabs}>
-        {lifecycles.map((tab) => (
-          <button
-            key={tab.id}
-            className={`${styles.subTab} ${activeSub === tab.id ? styles.active : ""}`}
-            onClick={() => setActiveSub(tab.id)}
-          >
-            {tab.label}
-            {tab.modified && <span className={styles.dot} />}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
