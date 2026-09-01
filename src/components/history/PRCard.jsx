@@ -10,55 +10,82 @@ export default function PRCard({
   onToggleSelect,
 }) {
   const navigate = useNavigate();
+  const toggleBlocked = !selected && selectionDisabled;
+
+  const handleToggle = () => {
+    if (toggleBlocked) return;
+    onToggleSelect(item.id);
+  };
+
+  const goToDetail = (e) => {
+    e.stopPropagation();
+    navigate(`/history/${item.id}`);
+  };
 
   return (
     <div
-      className={`${styles.card} ${selected ? styles.highlighted : ""}`}
-      role="button"
+      className={`${styles.card} ${selected ? styles.highlighted : ""} ${toggleBlocked ? styles.disabled : ""}`}
+      role="checkbox"
+      aria-checked={selected}
+      aria-disabled={toggleBlocked}
       tabIndex={0}
-      onClick={() => navigate(`/history/${item.id}`)}
+      onClick={handleToggle}
       onKeyDown={(e) => {
-        if (e.key === "Enter") navigate(`/history/${item.id}`);
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleToggle();
+        }
       }}
     >
       <input
         type="checkbox"
         className={styles.checkbox}
-        aria-label="비교 대상으로 선택"
+        aria-hidden="true"
+        tabIndex={-1}
         checked={selected}
-        disabled={!selected && selectionDisabled}
+        disabled={toggleBlocked}
         onClick={(e) => e.stopPropagation()}
-        onChange={() => onToggleSelect(item.id)}
+        onChange={handleToggle}
       />
 
       <div className={styles.body}>
         <div className={styles.topRow}>
-          <div className={styles.titleGroup}>
+          <div
+            className={styles.titleGroup}
+            role="link"
+            tabIndex={0}
+            onClick={goToDetail}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") goToDetail(e);
+            }}
+          >
             <Badge tone={selected ? "accent" : "neutral"}>{item.targetLabel}</Badge>
             <span className={styles.title}>{item.title}</span>
           </div>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            삭제
-          </Button>
-        </div>
 
-        <div className={styles.meta}>
-          {item.author ? `작성자 ${item.author} · ` : ""}
-          저장 {item.savedAt}
-          {item.version ? ` · v${item.version}` : ""}
+          <div className={styles.rightGroup}>
+            <span className={styles.meta}>
+              {item.author ? `${item.author} · ` : ""}
+              {item.savedAt}
+              {item.version ? ` · v${item.version}` : ""}
+            </span>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              삭제
+            </Button>
+          </div>
         </div>
 
         {item.changedPaths?.length > 0 && (
-          <div className={styles.changes}>
-            {item.changedPaths.map((path, idx) => (
-              <div key={idx} className={styles.changeRow}>
-                <span className={styles.dot} />
-                <span className={styles.changePath}>{path}</span>
-              </div>
+          <div className={styles.tags}>
+            {item.changedPaths.map((path) => (
+              <span key={path} className={styles.tag}>
+                <span className={styles.tagDot} />
+                {path}
+              </span>
             ))}
           </div>
         )}

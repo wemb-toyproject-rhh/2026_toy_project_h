@@ -30,6 +30,7 @@ export default function SubTabGroup({
             className={`${styles.primaryTab} ${activePrimaryId === tab.id ? styles.active : ""}`}
             onClick={() => onPrimaryChange(tab.id)}
           >
+            <span className={`${styles.fileIcon} ${styles[tab.id] ?? ""}`} />
             {tab.label}
             {tab.modified && <span className={styles.dot} />}
           </button>

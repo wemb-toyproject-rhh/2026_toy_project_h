@@ -6,15 +6,9 @@
   min-height: 0;
 }
 
-.toolbar {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
 .search {
-  flex: 1;
+  width: 100%;
+  flex-shrink: 0;
   padding: 9px 14px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
@@ -32,6 +26,54 @@
 
 .search::placeholder {
   color: var(--color-text-muted);
+}
+
+.selectionBarWrap {
+  position: fixed;
+  left: var(--sidebar-width);
+  right: 0;
+  bottom: 22px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.selectionBar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  animation: selectionBarIn 0.16s ease;
+}
+
+.selectionCount {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+@keyframes selectionBarIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selectionBar {
+    animation: none;
+  }
 }
 
 .list {

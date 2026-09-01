@@ -21,20 +21,28 @@ export default function HistoryListPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <input
-          type="text"
-          className={styles.search}
-          placeholder="이력 제목, 작성자, 스크립트 검색..."
-        />
-        <Button
-          variant="primary"
-          disabled={!canCompare}
-          onClick={() => navigate("/compare", { state: { ids: selectedIds } })}
-        >
-          선택한 이력 Diff 비교 ({selectedIds.length}/2)
-        </Button>
-      </div>
+      <input
+        type="text"
+        className={styles.search}
+        placeholder="이력 제목, 작성자, 스크립트 검색..."
+      />
+
+      {selectedIds.length > 0 && (
+        <div className={styles.selectionBarWrap}>
+          <div className={styles.selectionBar}>
+            <span className={styles.selectionCount}>
+              {selectedIds.length}개 선택됨 · 비교하려면 2개를 선택하세요
+            </span>
+            <Button
+              variant="primary"
+              disabled={!canCompare}
+              onClick={() => navigate("/compare", { state: { ids: selectedIds } })}
+            >
+              선택한 이력 Diff 비교 ({selectedIds.length}/2)
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className={styles.list}>
         {historyEntries.map((item) => (
