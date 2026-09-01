@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Badge from "../common/Badge.jsx";
 import Button from "../common/Button.jsx";
+import Icon from "../common/Icon.jsx";
 import styles from "./PRCard.module.css";
 
 export default function PRCard({
@@ -70,11 +71,13 @@ export default function PRCard({
               {item.version ? ` · v${item.version}` : ""}
             </span>
             <Button
-              variant="danger"
-              size="sm"
+              variant="ghostDanger"
+              size="icon"
+              aria-label="이력 삭제"
+              title="이력 삭제"
               onClick={(e) => e.stopPropagation()}
             >
-              삭제
+              <Icon name="trash" size={14} />
             </Button>
           </div>
         </div>

@@ -63,6 +63,16 @@
   background: #fde2e2;
 }
 
+.ghostDanger {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text-muted);
+}
+.ghostDanger:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
 /* sizes */
 .sm {
   padding: 4px 10px;
@@ -71,4 +81,9 @@
 .md {
   padding: 7px 14px;
   font-size: 13px;
+}
+.icon {
+  width: 26px;
+  height: 26px;
+  padding: 0;
 }

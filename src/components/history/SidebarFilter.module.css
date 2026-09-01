@@ -3,7 +3,7 @@
   flex-shrink: 0;
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
-  padding: 20px 16px;
+  padding: 20px 16px 20px 8px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -16,6 +16,51 @@
   gap: 2px;
 }
 
+.pageGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pageRow {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.toggle {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.toggle svg {
+  transition: transform 0.15s ease;
+}
+
+.toggle.toggleExpanded svg {
+  transform: rotate(90deg);
+}
+
+.toggle:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.toggleSpacer {
+  width: 18px;
+  flex-shrink: 0;
+}
+
 .item {
   padding: 9px 10px;
   border-radius: var(--radius-sm);
@@ -25,8 +70,37 @@
   gap: 8px;
   font-size: 13px;
   color: var(--color-text-secondary);
+  text-decoration: none;
   cursor: pointer;
   transition: background 0.15s ease;
+}
+
+.pageLink {
+  flex: 1;
+  min-width: 0;
+}
+
+.childItem {
+  padding-left: 20px;
+  font-size: 12.5px;
+}
+
+.treeBranch {
+  position: relative;
+  width: 8px;
+  flex-shrink: 0;
+}
+
+.treeBranch::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: -9px;
+  width: 8px;
+  height: 18px;
+  border-left: 1px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border-strong);
+  border-radius: 0 0 0 4px;
 }
 
 .item:hover {
@@ -44,17 +118,24 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  flex: 1;
+}
+
+.labelText {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .icon {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.7;
   width: 14px;
-  text-align: center;
   flex-shrink: 0;
+  color: inherit;
 }
 
 .count {

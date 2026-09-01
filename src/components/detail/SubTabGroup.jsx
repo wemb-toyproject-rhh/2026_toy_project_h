@@ -15,9 +15,6 @@ export default function SubTabGroup({
   return (
     <div className={styles.group}>
       <div className={styles.header}>
-        <span className={styles.targetLabel}>
-          {targetLabel ? `선택된 대상 · ${targetLabel}` : "라이프사이클"}
-        </span>
         <span className={styles.legend}>
           <span className={styles.dot} /> 이번 이력에서 변경된 스크립트
         </span>

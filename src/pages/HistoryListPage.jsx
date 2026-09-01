@@ -1,13 +1,20 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { historyEntries } from "../mocks/historyAdapter.js";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { filterEntriesByTarget, historyEntries } from "../mocks/historyAdapter.js";
 import PRCard from "../components/history/PRCard.jsx";
 import Button from "../components/common/Button.jsx";
 import styles from "./HistoryListPage.module.css";
 
 export default function HistoryListPage() {
   const [selectedIds, setSelectedIds] = useState([]);
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const targetId = searchParams.get("target");
+  const entries = filterEntriesByTarget(targetId);
+  const activeTargetLabel = targetId
+    ? historyEntries.find((entry) => entry.targetId === targetId)?.targetLabel
+    : null;
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) => {
@@ -27,6 +34,15 @@ export default function HistoryListPage() {
         placeholder="이력 제목, 작성자, 스크립트 검색..."
       />
 
+      {activeTargetLabel && (
+        <div className={styles.filterChip}>
+          <span>{activeTargetLabel} 필터링 중</span>
+          <Link to="/" className={styles.filterClear}>
+            전체 보기
+          </Link>
+        </div>
+      )}
+
       {selectedIds.length > 0 && (
         <div className={styles.selectionBarWrap}>
           <div className={styles.selectionBar}>
@@ -45,7 +61,7 @@ export default function HistoryListPage() {
       )}
 
       <div className={styles.list}>
-        {historyEntries.map((item) => (
+        {entries.map((item) => (
           <PRCard
             key={item.id}
             item={item}

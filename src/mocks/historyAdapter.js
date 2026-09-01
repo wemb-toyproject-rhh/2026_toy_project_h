@@ -4,7 +4,7 @@
 import tbPageHist from "./db/tbPageHist.js";
 import tbInstanceHist from "./db/tbInstanceHist.js";
 
-const ICON_BY_KIND = { page: "📄", "2D": "🧩", "3D": "🧊" };
+const ICON_BY_KIND = { page: "page", "2D": "component2d", "3D": "component3d" };
 
 const PAGE_LIFECYCLES = [
   { id: "beforeLoad", label: "beforeLoad", field: "lc_before_load" },
@@ -100,6 +100,7 @@ function buildPageEntries() {
         kind: "page",
         targetId: row.page_id,
         targetLabel: `[Page] ${row.name}`,
+        targetName: row.name,
         title: row.comment || `${row.name} 저장`,
         author: row.last_user ?? null,
         version: row.version ?? null,
@@ -160,7 +161,9 @@ function buildInstanceEntries() {
         histId: row.hist_id,
         kind: row.category,
         targetId: row.inst_id,
+        pageTargetId: row.page_id ?? null,
         targetLabel: `[${is3D ? "3D" : "Comp"}: ${row.comp_name}]`,
+        targetName: row.comp_name,
         title: row.comment || `${row.comp_name} 저장`,
         author: null, // tb_instance_hist has no last_user column
         version: null, // tb_instance_hist has no version column
@@ -202,22 +205,51 @@ export function getPrevTabContent(entry, primaryId, subId) {
   return entry.lifecycles.find((lc) => lc.id === subId)?.prevContent ?? "";
 }
 
-export function buildTargetSummaries() {
-  const map = new Map();
+// Sidebar tree: pages at the top level, their components (2D/3D instances)
+// nested underneath — matches how RENOBIT actually contains components
+// inside a page.
+export function buildTargetTree() {
+  const pages = new Map();
+  const childrenByPage = new Map();
+
   historyEntries.forEach((entry) => {
-    if (!map.has(entry.targetId)) {
-      map.set(entry.targetId, {
+    if (entry.kind === "page") {
+      if (!pages.has(entry.targetId)) {
+        pages.set(entry.targetId, {
+          id: entry.targetId,
+          icon: ICON_BY_KIND.page,
+          label: entry.targetName,
+          count: 0,
+        });
+      }
+      pages.get(entry.targetId).count += 1;
+      return;
+    }
+
+    const pageId = entry.pageTargetId;
+    if (!childrenByPage.has(pageId)) childrenByPage.set(pageId, new Map());
+    const bucket = childrenByPage.get(pageId);
+    if (!bucket.has(entry.targetId)) {
+      bucket.set(entry.targetId, {
         id: entry.targetId,
         icon: ICON_BY_KIND[entry.kind] ?? "•",
-        label: entry.targetLabel,
+        label: entry.targetName,
         count: 0,
       });
     }
-    map.get(entry.targetId).count += 1;
+    bucket.get(entry.targetId).count += 1;
   });
 
-  return [
-    { id: "all", icon: "◆", label: "전체 이력 보기", count: historyEntries.length },
-    ...map.values(),
-  ];
+  return {
+    all: { id: "all", icon: "all", label: "전체 이력 보기", count: historyEntries.length },
+    pages: [...pages.values()].map((page) => ({
+      ...page,
+      children: [...(childrenByPage.get(page.id)?.values() ?? [])],
+    })),
+  };
+}
+
+export function filterEntriesByTarget(targetId) {
+  if (!targetId || targetId === "all") return historyEntries;
+  return historyEntries.filter((entry) => entry.targetId === targetId);
 }
