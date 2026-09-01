@@ -1,12 +1,14 @@
 import styles from "./VersionSelectBar.module.css";
 
-export default function VersionSelectBar() {
+export default function VersionSelectBar({ versionA, versionB }) {
   return (
     <div className={styles.bar}>
       <div className={styles.field}>
         <label className={styles.label}>버전 A</label>
-        <select className={styles.select} defaultValue="10">
-          <option value="10">PR #10 · 2026-08-30 15:00</option>
+        <select className={styles.select} defaultValue={versionA?.id}>
+          <option value={versionA?.id}>
+            PR #{versionA?.id} · {versionA?.savedAt}
+          </option>
         </select>
       </div>
 
@@ -14,8 +16,10 @@ export default function VersionSelectBar() {
 
       <div className={styles.field}>
         <label className={styles.label}>버전 B</label>
-        <select className={styles.select} defaultValue="12">
-          <option value="12">PR #12 · 2026-08-31 10:20</option>
+        <select className={styles.select} defaultValue={versionB?.id}>
+          <option value={versionB?.id}>
+            PR #{versionB?.id} · {versionB?.savedAt}
+          </option>
         </select>
       </div>
 

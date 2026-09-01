@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import mockHistory from "../mocks/mockHistory.json";
 import Badge from "../components/common/Badge.jsx";
 import Button from "../components/common/Button.jsx";
+import BackLink from "../components/common/BackLink.jsx";
 import ConversationPanel from "../components/detail/ConversationPanel.jsx";
 import SubTabGroup from "../components/detail/SubTabGroup.jsx";
 import DiffBlock from "../components/common/DiffBlock.jsx";
@@ -40,6 +41,8 @@ export default function HistoryDetailPage() {
 
   return (
     <div className={styles.page}>
+      <BackLink />
+
       <div className={styles.header}>
         <div className={styles.titleGroup}>
           <Badge tone="accent">PR #{item.id}</Badge>
