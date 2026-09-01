@@ -14,11 +14,12 @@
   --color-text-muted: #9aa1ac;
   --color-text-on-accent: #ffffff;
 
-  /* Accent (indigo) */
-  --color-accent: #4f46e5;
-  --color-accent-hover: #4338ca;
-  --color-accent-soft: #eef0fe;
-  --color-accent-soft-text: #4338ca;
+  /* Accent (vivid blue) */
+  --color-accent: #155eef;
+  --color-accent-hover: #0e46c4;
+  --color-accent-soft: #e9f0ff;
+  --color-accent-soft-text: #0e46c4;
+  --color-accent-rgb: 21, 94, 239;
 
   /* Semantic */
   --color-danger: #dc2626;
@@ -33,9 +34,9 @@
   --color-diff-del-text: #c92a2a;
 
   /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
 
   /* Shadow */
   --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.04);
