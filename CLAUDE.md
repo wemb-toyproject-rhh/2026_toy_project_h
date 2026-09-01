@@ -1,0 +1,63 @@
+# RENOBIT History Hub (RHH) - Project Guidelines
+
+## Project Overview
+
+- **Description:** RENOBIT 전용 외부 버전 관리(사이드카) SPA 웹 서비스.
+- **Key Flow:** RENOBIT DB 트리거 기반의 변경 이력(`tb_page_hist`, `tb_instance_hist`)을 연동하여 Git PR 형태의 UI로 이력 조회, Diff 비교, 마크다운 비고 작성 및 원클릭 스크립트 복사 기능 제공.
+- **Tech Stack:** React, Vite, JavaScript/TypeScript, Monaco Editor (Diff Viewer), CSS / Styled Systems.
+- **Target Resolution:** Responsive Desktop Layout
+
+## Project Directory Structure
+
+```text
+src/
+├── assets/          # Static files (images, icons)
+├── components/      # Reusable UI components
+│   ├── common/      # Generic UI (Buttons, Modals, Tabs, Badges)
+│   ├── history/     # View 1: HistoryList, PRCard, SidebarFilter
+│   ├── detail/      # View 2: HistoryDetail, ConversationPanel, SubTabGroup
+│   └── compare/     # View 3: VersionCompare, SideBySideDiff
+├── services/        # API call functions & Axios setup
+├── mocks/           # Mock data JSONs (mockHistory.json, etc.)
+├── hooks/           # Custom React Hooks
+├── pages/           # Main Page layouts (HistoryPage)
+├── styles/          # Global styles & CSS variables
+├── App.jsx          # Root component & Route handling
+└── main.jsx         # Entry point
+```
+
+## Architecture & Data Context
+
+- **DB Trigger Integration:** RENOBIT core DB triggers auto-save script logs into `tb_page_hist` & `tb_instance_hist`.
+- **Local Simulation Setup:** Target RENOBIT DB triggers auto-save page history on local environment for demo.
+- **Target Hierarchies & Lifecycle:**
+  - Page: `CSS` / `JS` (`beforeLoad`, `loaded`, `beforeUnLoad`)
+  - 2D Component: `HTML` / `CSS` / `JS` (`register`, `completed`, `beforeDestroy`, `destroy`, `preview`)
+  - 3D Component: `JS` (`register`, `beforeDestroy`, `destroy`)
+
+## Essential Commands
+
+- `npm run dev`: Start Vite development server
+- `npm run build`: Build production SPA bundle
+- `npm run lint`: Run ESLint checks
+
+## Code & Conventions Guidelines
+
+- **UI/UX Rules:**
+  - Sub-tab interface matching RENOBIT native UI: Primary tabs (`CSS`, `JS`) and secondary lifecycle sub-tabs (`beforeLoad`, `loaded`, etc.).
+  - Visually highlight modified sub-tabs using a red dot (`•`) indicator instead of opening full tree views.
+  - History detail view (View 2) MUST feature Markdown note with toggleable view/edit modes (`[비고 수정]` -> `[저장]`/`[취소]`).
+  - History list view (View 1) uses checkboxes to select exactly 2 PRs, enabling the `[선택한 2개 이력 Diff 비교 (2/2)]` button to switch to View 3.
+- **Formatting:** Keep components modularized under `/src/components` (e.g., `HistoryList`, `HistoryDetail`, `DiffViewer`, `ConversationPanel`).
+- **Token Efficiency:** When modifying code, focus strictly on requested UI component files or API services. Do NOT scan irrelevant files unnecessarily.
+
+## Backend Integration API Protocol (Draft / Mock Data Compatible)
+
+- `GET /api/history`: Fetch PR history list (supports target filtering by page/component)
+- `GET /api/history/:id`: Fetch specific PR snapshot & script diffs
+- `PUT /api/history/:id/metadata`: Update PR Title & Markdown Conversation note
+- `GET /api/history/compare?v1={id1}&v2={id2}`: Fetch scripts for side-by-side comparison
+
+```
+
+```
