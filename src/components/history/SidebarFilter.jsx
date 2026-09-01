@@ -4,8 +4,6 @@ import styles from "./SidebarFilter.module.css";
 export default function SidebarFilter() {
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.heading}>타겟별 이력 모아보기</div>
-
       <div className={styles.list}>
         {mockHistory.targets.map((target, index) => (
           <div

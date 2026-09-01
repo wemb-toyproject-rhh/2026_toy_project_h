@@ -11,15 +11,6 @@
   overflow-y: auto;
 }
 
-.heading {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 0 6px;
-}
-
 .list {
   display: flex;
   flex-direction: column;
