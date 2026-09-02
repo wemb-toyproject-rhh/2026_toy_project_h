@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { filterEntriesByTarget, historyEntries, updateEntryTitle } from "../mocks/historyAdapter.js";
+import {
+  filterEntriesByTarget,
+  historyEntries,
+  updateEntryTitle,
+} from "../mocks/historyAdapter.js";
 import PRCard from "../components/history/PRCard.jsx";
 import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
@@ -12,21 +16,25 @@ export default function HistoryListPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [, forceRerender] = useReducer((n) => n + 1, 0);
+  const [, forceRerender] = useReducer(n => n + 1, 0);
   const [sortOrder, setSortOrder] = useState("desc");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [typeFilters, setTypeFilters] = useState({ css: false, html: false, js: false });
+  const [typeFilters, setTypeFilters] = useState({
+    css: false,
+    html: false,
+    js: false,
+  });
   const [filterOpen, setFilterOpen] = useState(false);
   const filterWrapRef = useRef(null);
 
   useEffect(() => {
     if (!filterOpen) return undefined;
 
-    const handlePointerDown = (e) => {
+    const handlePointerDown = e => {
       if (!filterWrapRef.current?.contains(e.target)) setFilterOpen(false);
     };
-    const handleKeyDown = (e) => {
+    const handleKeyDown = e => {
       if (e.key === "Escape") setFilterOpen(false);
     };
 
@@ -45,25 +53,29 @@ export default function HistoryListPage() {
 
   const targetId = searchParams.get("target");
   const activeTargetLabel = targetId
-    ? historyEntries.find((entry) => entry.targetId === targetId)?.targetLabel
+    ? historyEntries.find(entry => entry.targetId === targetId)?.targetLabel
     : null;
 
-  const activeTypes = Object.keys(typeFilters).filter((type) => typeFilters[type]);
+  const activeTypes = Object.keys(typeFilters).filter(
+    type => typeFilters[type],
+  );
 
   const entries = useMemo(() => {
     let list = filterEntriesByTarget(targetId);
 
     if (dateFrom) {
       const from = new Date(dateFrom);
-      list = list.filter((entry) => new Date(entry.savedAtRaw) >= from);
+      list = list.filter(entry => new Date(entry.savedAtRaw) >= from);
     }
     if (dateTo) {
       const to = new Date(`${dateTo}T23:59:59.999`);
-      list = list.filter((entry) => new Date(entry.savedAtRaw) <= to);
+      list = list.filter(entry => new Date(entry.savedAtRaw) <= to);
     }
     if (activeTypes.length > 0) {
-      list = list.filter((entry) =>
-        entry.primaryTabs.some((tab) => activeTypes.includes(tab.id) && tab.modified),
+      list = list.filter(entry =>
+        entry.primaryTabs.some(
+          tab => activeTypes.includes(tab.id) && tab.modified,
+        ),
       );
     }
 
@@ -75,24 +87,27 @@ export default function HistoryListPage() {
 
   const hasDateFilter = Boolean(dateFrom || dateTo);
   const hasTypeFilter = activeTypes.length > 0;
-  const dateRangeLabel = dateFrom && dateTo
-    ? `${dateFrom} ~ ${dateTo}`
-    : dateFrom
-      ? `${dateFrom} 이후`
-      : `${dateTo} 이전`;
-  const typeFilterLabel = activeTypes.map((type) => TYPE_LABELS[type]).join(", ");
+  const dateRangeLabel =
+    dateFrom && dateTo
+      ? `${dateFrom} ~ ${dateTo}`
+      : dateFrom
+        ? `${dateFrom} 이후`
+        : `${dateTo} 이전`;
+  const typeFilterLabel = activeTypes.map(type => TYPE_LABELS[type]).join(", ");
   const clearDateFilter = () => {
     setDateFrom("");
     setDateTo("");
   };
-  const clearTypeFilter = () => setTypeFilters({ css: false, html: false, js: false });
-  const toggleTypeFilter = (type) =>
-    setTypeFilters((prev) => ({ ...prev, [type]: !prev[type] }));
-  const toggleSortOrder = () => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
+  const clearTypeFilter = () =>
+    setTypeFilters({ css: false, html: false, js: false });
+  const toggleTypeFilter = type =>
+    setTypeFilters(prev => ({ ...prev, [type]: !prev[type] }));
+  const toggleSortOrder = () =>
+    setSortOrder(prev => (prev === "desc" ? "asc" : "desc"));
 
-  const toggleSelect = (id) => {
-    setSelectedIds((prev) => {
-      if (prev.includes(id)) return prev.filter((existing) => existing !== id);
+  const toggleSelect = id => {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) return prev.filter(existing => existing !== id);
       if (prev.length >= 2) return prev;
       return [...prev, id];
     });
@@ -109,20 +124,21 @@ export default function HistoryListPage() {
           className={styles.filterToggle}
           aria-haspopup="true"
           aria-expanded={filterOpen}
-          onClick={() => setFilterOpen((v) => !v)}
+          onClick={() => setFilterOpen(v => !v)}
         >
           필터
-          {(hasDateFilter || hasTypeFilter) && <span className={styles.filterDot} />}
+          {(hasDateFilter || hasTypeFilter) && (
+            <span className={styles.filterDot} />
+          )}
           <Icon name="chevron" size={10} className={styles.filterChevron} />
         </button>
 
         <span className={styles.searchDivider} />
 
-        <Icon name="search" size={14} className={styles.searchIcon} />
         <input
           type="text"
           className={styles.searchInput}
-          placeholder="이력 제목, 작성자, 스크립트 검색..."
+          placeholder="컴포넌트명, 제목, 작성자로 검색..."
         />
 
         {filterOpen && (
@@ -156,7 +172,11 @@ export default function HistoryListPage() {
                 </button>
               </div>
               {hasTypeFilter && (
-                <button type="button" className={styles.dateReset} onClick={clearTypeFilter}>
+                <button
+                  type="button"
+                  className={styles.dateReset}
+                  onClick={clearTypeFilter}
+                >
                   유형 초기화
                 </button>
               )}
@@ -170,7 +190,7 @@ export default function HistoryListPage() {
                   className={styles.dateInput}
                   value={dateFrom}
                   max={dateTo || undefined}
-                  onChange={(e) => setDateFrom(e.target.value)}
+                  onChange={e => setDateFrom(e.target.value)}
                   aria-label="시작 날짜"
                 />
                 <span className={styles.dateSep}>~</span>
@@ -179,12 +199,16 @@ export default function HistoryListPage() {
                   className={styles.dateInput}
                   value={dateTo}
                   min={dateFrom || undefined}
-                  onChange={(e) => setDateTo(e.target.value)}
+                  onChange={e => setDateTo(e.target.value)}
                   aria-label="종료 날짜"
                 />
               </div>
               {hasDateFilter && (
-                <button type="button" className={styles.dateReset} onClick={clearDateFilter}>
+                <button
+                  type="button"
+                  className={styles.dateReset}
+                  onClick={clearDateFilter}
+                >
                   기간 초기화
                 </button>
               )}
@@ -248,7 +272,9 @@ export default function HistoryListPage() {
             <Button
               variant="primary"
               disabled={!canCompare}
-              onClick={() => navigate("/compare", { state: { ids: selectedIds } })}
+              onClick={() =>
+                navigate("/compare", { state: { ids: selectedIds } })
+              }
             >
               Diff 비교 ({selectedIds.length}/2)
             </Button>
@@ -271,7 +297,11 @@ export default function HistoryListPage() {
             type="button"
             className={styles.sortToggle}
             onClick={toggleSortOrder}
-            aria-label={sortOrder === "desc" ? "최신순 (클릭 시 오래된순)" : "오래된순 (클릭 시 최신순)"}
+            aria-label={
+              sortOrder === "desc"
+                ? "최신순 (클릭 시 오래된순)"
+                : "오래된순 (클릭 시 최신순)"
+            }
             title={sortOrder === "desc" ? "최신순" : "오래된순"}
           >
             <Icon name="sortArrows" size={13} direction={sortOrder} />
@@ -280,7 +310,7 @@ export default function HistoryListPage() {
         </div>
 
         <div className={styles.list}>
-          {entries.map((item) => (
+          {entries.map(item => (
             <PRCard
               key={item.id}
               item={item}
