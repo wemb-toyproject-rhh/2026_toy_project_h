@@ -80,6 +80,13 @@
   background: #e0b23c;
 }
 
+.subTabsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .subTabs {
   display: flex;
   gap: 3px;

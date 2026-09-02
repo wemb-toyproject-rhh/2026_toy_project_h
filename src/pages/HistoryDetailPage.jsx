@@ -1,16 +1,21 @@
 import { useMemo, useReducer, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
+  getDiffStats,
   getEntryById,
   getPrevTabContent,
   getTabContent,
   updateEntryTitle,
 } from "../mocks/historyAdapter.js";
 import { computeDiff } from "../utils/diff.js";
+import { copyToClipboard } from "../utils/clipboard.js";
 import Badge from "../components/common/Badge.jsx";
 import Button from "../components/common/Button.jsx";
+import Icon from "../components/common/Icon.jsx";
 import BackLink from "../components/common/BackLink.jsx";
 import EditableTitle from "../components/common/EditableTitle.jsx";
+import DiffStatBadge from "../components/common/DiffStatBadge.jsx";
+import ScrollToTopButton from "../components/common/ScrollToTopButton.jsx";
 import ConversationPanel from "../components/detail/ConversationPanel.jsx";
 import SubTabGroup from "../components/detail/SubTabGroup.jsx";
 import DiffBlock from "../components/common/DiffBlock.jsx";
@@ -34,9 +39,23 @@ export default function HistoryDetailPage() {
     return computeDiff(prev, current).unified;
   }, [entry, activePrimaryId, activeSubId]);
 
+  const diffStats = useMemo(() => getDiffStats(entry), [entry]);
+
   const note = {
     summary: entry.comment || "작성된 설명이 없습니다.",
     raw: entry.comment ?? "",
+  };
+
+  const activePrimaryTab = entry.primaryTabs.find((tab) => tab.id === activePrimaryId);
+  const activeCopyLabel = activePrimaryTab?.hasSubTabs
+    ? entry.lifecycles.find((lc) => lc.id === activeSubId)?.label ?? activePrimaryTab.label
+    : activePrimaryTab?.label ?? "";
+
+  const [copied, setCopied] = useState(false);
+  const handleCopyActive = async () => {
+    await copyToClipboard(getTabContent(entry, activePrimaryId, activeSubId));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   return (
@@ -61,7 +80,18 @@ export default function HistoryDetailPage() {
             {entry.savedAt}
             {entry.version ? ` · v${entry.version}` : ""}
           </span>
-          <Button variant="primary">전체 스크립트 복사</Button>
+          <div className={styles.copyWrap}>
+            <Button
+              variant="primary"
+              size="icon"
+              aria-label={`${activeCopyLabel} 코드 복사`}
+              title={`${activeCopyLabel} 코드 복사`}
+              onClick={handleCopyActive}
+            >
+              <Icon name={copied ? "check" : "copy"} size={14} />
+            </Button>
+            {copied && <span className={styles.copiedToast}>복사되었습니다</span>}
+          </div>
         </div>
       </div>
 
@@ -75,9 +105,14 @@ export default function HistoryDetailPage() {
         activeSubId={activeSubId}
         onPrimaryChange={setActivePrimaryId}
         onSubChange={setActiveSubId}
+        diffBadge={
+          <DiffStatBadge additions={diffStats.additions} deletions={diffStats.deletions} />
+        }
       />
 
       <DiffBlock lines={diffLines} />
+
+      <ScrollToTopButton />
     </div>
   );
 }

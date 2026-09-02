@@ -91,6 +91,27 @@ const ICONS = {
       strokeLinejoin="round"
     />
   ),
+  copy: (
+    <>
+      <rect
+        x="5.5"
+        y="5.5"
+        width="7.5"
+        height="7.5"
+        rx="1.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+      />
+      <path
+        d="M10 5.5V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h1.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </>
+  ),
   pencil: (
     <>
       <path

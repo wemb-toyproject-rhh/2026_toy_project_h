@@ -3,6 +3,7 @@
 // real API replaces the mock tables below.
 import tbPageHist from "./db/tbPageHist.js";
 import tbInstanceHist from "./db/tbInstanceHist.js";
+import { computeDiff } from "../utils/diff.js";
 
 const ICON_BY_KIND = { page: "page", "2D": "component2d", "3D": "component3d" };
 
@@ -189,6 +190,28 @@ export const historyEntries = [...buildPageEntries(), ...buildInstanceEntries()]
 
 export function getEntryById(id) {
   return historyEntries.find((entry) => entry.id === id) ?? null;
+}
+
+// Total added/removed line counts across every diffable field of an entry
+// (CSS, HTML, and each lifecycle script) — used for the +N -M stat badge.
+export function getDiffStats(entry) {
+  if (!entry) return { additions: 0, deletions: 0 };
+
+  let additions = 0;
+  let deletions = 0;
+
+  const countPair = (prev, current) => {
+    computeDiff(prev, current).unified.forEach((line) => {
+      if (line.type === "add") additions += 1;
+      else if (line.type === "del") deletions += 1;
+    });
+  };
+
+  countPair(entry.prevCssCode, entry.cssCode);
+  countPair(entry.prevHtmlCode, entry.htmlCode);
+  entry.lifecycles.forEach((lc) => countPair(lc.prevContent, lc.content));
+
+  return { additions, deletions };
 }
 
 // Mock stand-in for PUT /api/history/:id/metadata — mutates the shared

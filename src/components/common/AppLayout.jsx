@@ -9,7 +9,7 @@ export default function AppLayout() {
       <Header />
       <div className={styles.body}>
         <SidebarFilter />
-        <main className={styles.content}>
+        <main className={styles.content} data-scroll-container>
           <Outlet />
         </main>
       </div>
