@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "../common/Icon.jsx";
 import styles from "./VersionSelect.module.css";
 
-export default function VersionSelect({ label, options, onSelect }) {
+export default function VersionSelect({ label, meta, options, onSelect }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -33,7 +33,10 @@ export default function VersionSelect({ label, options, onSelect }) {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className={styles.triggerText}>{label}</span>
+        <span className={styles.triggerTextWrap}>
+          <span className={styles.triggerText}>{label}</span>
+          {meta && <span className={styles.triggerMeta}>{meta}</span>}
+        </span>
         <Icon name="chevron" size={10} className={styles.chevron} />
       </button>
 

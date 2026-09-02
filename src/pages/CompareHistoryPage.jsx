@@ -10,6 +10,10 @@ import styles from "./CompareHistoryPage.module.css";
 
 const DEFAULT_IDS = ["page-28", "page-29"];
 
+function formatVersionMeta(entry) {
+  return `${entry.savedAt}${entry.version ? ` · v${entry.version}` : ""}`;
+}
+
 export default function CompareHistoryPage() {
   const { state } = useLocation();
   const [idA, setIdA] = useState(state?.ids?.[0] ?? DEFAULT_IDS[0]);
@@ -18,12 +22,13 @@ export default function CompareHistoryPage() {
   const versionB = getEntryById(idB) ?? getEntryById(DEFAULT_IDS[1]);
 
   // A version can only be swapped for another history entry of the same
-  // page/component — comparing unrelated targets wouldn't make sense.
+  // page/component, and never for whatever the other side is already
+  // showing — comparing an entry against itself isn't a useful diff.
   const optionsA = filterEntriesByTarget(versionA.targetId).filter(
-    (entry) => entry.id !== versionA.id,
+    (entry) => entry.id !== versionA.id && entry.id !== versionB.id,
   );
   const optionsB = filterEntriesByTarget(versionB.targetId).filter(
-    (entry) => entry.id !== versionB.id,
+    (entry) => entry.id !== versionB.id && entry.id !== versionA.id,
   );
 
   const [activePrimaryId, setActivePrimaryId] = useState(
@@ -60,6 +65,7 @@ export default function CompareHistoryPage() {
       <SideBySideDiff
         left={{
           label: `버전 A · ${versionA.targetLabel}`,
+          meta: formatVersionMeta(versionA),
           lines: left,
           code: codeA,
           options: optionsA,
@@ -67,6 +73,7 @@ export default function CompareHistoryPage() {
         }}
         right={{
           label: `버전 B · ${versionB.targetLabel}`,
+          meta: formatVersionMeta(versionB),
           lines: right,
           code: codeB,
           options: optionsB,
