@@ -6,6 +6,8 @@ import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
 import styles from "./HistoryListPage.module.css";
 
+const TYPE_LABELS = { css: "CSS", html: "HTML", js: "JAVASCRIPT" };
+
 export default function HistoryListPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchParams] = useSearchParams();
@@ -73,6 +75,12 @@ export default function HistoryListPage() {
 
   const hasDateFilter = Boolean(dateFrom || dateTo);
   const hasTypeFilter = activeTypes.length > 0;
+  const dateRangeLabel = dateFrom && dateTo
+    ? `${dateFrom} ~ ${dateTo}`
+    : dateFrom
+      ? `${dateFrom} 이후`
+      : `${dateTo} 이전`;
+  const typeFilterLabel = activeTypes.map((type) => TYPE_LABELS[type]).join(", ");
   const clearDateFilter = () => {
     setDateFrom("");
     setDateTo("");
@@ -185,12 +193,49 @@ export default function HistoryListPage() {
         )}
       </div>
 
-      {activeTargetLabel && (
-        <div className={styles.filterChip}>
-          <span>{activeTargetLabel} 필터링 중</span>
-          <Link to="/" className={styles.filterClear}>
-            전체 보기
-          </Link>
+      {(activeTargetLabel || hasDateFilter || hasTypeFilter) && (
+        <div className={styles.activeFilters}>
+          {activeTargetLabel && (
+            <span className={styles.filterChip}>
+              {activeTargetLabel}
+              <Link
+                to="/"
+                className={styles.filterClear}
+                aria-label="타겟 필터 해제"
+                title="타겟 필터 해제"
+              >
+                <Icon name="close" size={9} />
+              </Link>
+            </span>
+          )}
+          {hasDateFilter && (
+            <span className={styles.filterChip}>
+              기간: {dateRangeLabel}
+              <button
+                type="button"
+                className={styles.filterClear}
+                onClick={clearDateFilter}
+                aria-label="기간 필터 해제"
+                title="기간 필터 해제"
+              >
+                <Icon name="close" size={9} />
+              </button>
+            </span>
+          )}
+          {hasTypeFilter && (
+            <span className={styles.filterChip}>
+              유형: {typeFilterLabel}
+              <button
+                type="button"
+                className={styles.filterClear}
+                onClick={clearTypeFilter}
+                aria-label="유형 필터 해제"
+                title="유형 필터 해제"
+              >
+                <Icon name="close" size={9} />
+              </button>
+            </span>
+          )}
         </div>
       )}
 
@@ -205,7 +250,7 @@ export default function HistoryListPage() {
               disabled={!canCompare}
               onClick={() => navigate("/compare", { state: { ids: selectedIds } })}
             >
-              선택한 이력 Diff 비교 ({selectedIds.length}/2)
+              Diff 비교 ({selectedIds.length}/2)
             </Button>
             <button
               type="button"

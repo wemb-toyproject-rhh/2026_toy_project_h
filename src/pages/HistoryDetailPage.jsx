@@ -35,7 +35,7 @@ export default function HistoryDetailPage() {
   }, [entry, activePrimaryId, activeSubId]);
 
   const note = {
-    summary: entry.comment || "작성된 비고가 없습니다.",
+    summary: entry.comment || "작성된 설명이 없습니다.",
     raw: entry.comment ?? "",
   };
 
@@ -55,7 +55,14 @@ export default function HistoryDetailPage() {
             }}
           />
         </div>
-        <Button variant="primary">전체 스크립트 복사</Button>
+        <div className={styles.headerRight}>
+          <span className={styles.meta}>
+            {entry.author ? `${entry.author} · ` : ""}
+            {entry.savedAt}
+            {entry.version ? ` · v${entry.version}` : ""}
+          </span>
+          <Button variant="primary">전체 스크립트 복사</Button>
+        </div>
       </div>
 
       <ConversationPanel note={note} />

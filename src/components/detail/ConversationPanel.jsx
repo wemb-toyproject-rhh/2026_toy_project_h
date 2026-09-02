@@ -9,10 +9,10 @@ export default function ConversationPanel({ note }) {
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <span className={styles.title}>Conversation · 상세 비고</span>
+        <span className={styles.title}>Description</span>
         {!editing ? (
           <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-            비고 수정
+            수정
           </Button>
         ) : (
           <div className={styles.actions}>
@@ -35,7 +35,6 @@ export default function ConversationPanel({ note }) {
 
       {!editing ? (
         <div className={styles.viewMode}>
-          <strong>작업 내용 요약</strong>
           <p>{note.summary}</p>
         </div>
       ) : (

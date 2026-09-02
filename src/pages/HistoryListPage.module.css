@@ -266,25 +266,44 @@
   color: var(--color-text);
 }
 
-.filterChip {
+.activeFilters {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  background: var(--color-accent-soft);
-  border-radius: var(--radius-sm);
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--color-accent-soft-text);
+  flex-wrap: wrap;
+  gap: 8px;
   flex-shrink: 0;
 }
 
-.filterClear {
-  color: var(--color-accent-soft-text);
-  text-decoration: underline;
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 10px;
+  background: var(--color-accent-soft);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
   font-weight: 600;
+  color: var(--color-accent-soft-text);
   white-space: nowrap;
+}
+
+.filterClear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-accent-soft-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.filterClear:hover {
+  background: rgba(var(--color-accent-rgb), 0.18);
 }
 
 .selectionBarWrap {

@@ -5,7 +5,11 @@ export default function Header() {
   return (
     <header className={styles.header}>
       <div className={styles.brandCol}>
-        <Link to="/" className={styles.logoLink} aria-label="RENOBIT History Hub 홈으로 이동">
+        <Link
+          to="/"
+          className={styles.logoLink}
+          aria-label="RENOBIT History Hub 홈으로 이동"
+        >
           <span className={styles.brand} aria-hidden="true">
             <strong className={styles.brandShort}>RHH</strong>
             <strong className={styles.brandFull}>RENOBIT History Hub</strong>

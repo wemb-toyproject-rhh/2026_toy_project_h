@@ -10,8 +10,8 @@ export default function SidebarFilter() {
   const activeTarget = searchParams.get("target") ?? "all";
   const { all, pages } = buildTargetTree();
 
-  const toggleCollapsed = (pageId) => {
-    setCollapsedIds((prev) => {
+  const toggleCollapsed = pageId => {
+    setCollapsedIds(prev => {
       const next = new Set(prev);
       if (next.has(pageId)) next.delete(pageId);
       else next.add(pageId);
@@ -39,7 +39,7 @@ export default function SidebarFilter() {
           </Link>
         </div>
 
-        {pages.map((page) => {
+        {pages.map(page => {
           const hasChildren = page.children.length > 0;
           const collapsed = collapsedIds.has(page.id);
 
@@ -50,7 +50,9 @@ export default function SidebarFilter() {
                   <button
                     type="button"
                     className={`${styles.toggle} ${collapsed ? "" : styles.toggleExpanded}`}
-                    aria-label={collapsed ? "하위 항목 펼치기" : "하위 항목 접기"}
+                    aria-label={
+                      collapsed ? "하위 항목 펼치기" : "하위 항목 접기"
+                    }
                     aria-expanded={!collapsed}
                     onClick={() => toggleCollapsed(page.id)}
                   >
@@ -76,7 +78,7 @@ export default function SidebarFilter() {
 
               {hasChildren &&
                 !collapsed &&
-                page.children.map((child) => (
+                page.children.map(child => (
                   <Link
                     key={child.id}
                     to={`/?target=${encodeURIComponent(child.id)}`}
@@ -99,7 +101,8 @@ export default function SidebarFilter() {
       </div>
 
       <p className={styles.hint}>
-        페이지나 컴포넌트를 선택하면 해당 타겟의 이력만 필터링되어 표시됩니다.
+        페이지나 컴포넌트를 선택하면 해당 타겟의 이력만 <br></br> 필터링되어
+        표시됩니다.
       </p>
     </aside>
   );
