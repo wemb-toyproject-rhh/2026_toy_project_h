@@ -193,7 +193,7 @@ function buildInstanceEntries() {
         kind: row.category,
         targetId: row.inst_id,
         pageTargetId: row.page_id ?? null,
-        targetLabel: `[${is3D ? "3D" : "Comp"}: ${row.comp_name}]`,
+        targetLabel: `[${is3D ? "3D" : "2D"}] ${row.comp_name}`,
         targetName: row.comp_name,
         title: row.comment || `${row.comp_name} 저장`,
         author: null, // tb_instance_hist has no last_user column
