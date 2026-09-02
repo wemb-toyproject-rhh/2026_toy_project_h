@@ -15,10 +15,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   font-size: 12.5px;
 }
 
-.paneHeader strong {
-  color: var(--color-text);
-  font-weight: 700;
-}
