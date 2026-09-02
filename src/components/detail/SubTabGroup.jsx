@@ -9,6 +9,7 @@ export default function SubTabGroup({
   onPrimaryChange,
   onSubChange,
   diffBadge,
+  legendText = "변경된 스크립트",
 }) {
   const activePrimaryTab = primaryTabs.find((tab) => tab.id === activePrimaryId);
   const showSubTabs = Boolean(activePrimaryTab?.hasSubTabs);
@@ -17,7 +18,7 @@ export default function SubTabGroup({
     <div className={styles.group}>
       <div className={styles.header}>
         <span className={styles.legend}>
-          <span className={styles.dot} /> 변경된 스크립트
+          <span className={styles.dot} /> {legendText}
         </span>
       </div>
 

@@ -8,13 +8,11 @@ import {
   updateEntryTitle,
 } from "../mocks/historyAdapter.js";
 import { computeDiff } from "../utils/diff.js";
-import { copyToClipboard } from "../utils/clipboard.js";
 import Badge from "../components/common/Badge.jsx";
-import Button from "../components/common/Button.jsx";
-import Icon from "../components/common/Icon.jsx";
 import BackLink from "../components/common/BackLink.jsx";
 import EditableTitle from "../components/common/EditableTitle.jsx";
 import DiffStatBadge from "../components/common/DiffStatBadge.jsx";
+import CopyButton from "../components/common/CopyButton.jsx";
 import ScrollToTopButton from "../components/common/ScrollToTopButton.jsx";
 import ConversationPanel from "../components/detail/ConversationPanel.jsx";
 import SubTabGroup from "../components/detail/SubTabGroup.jsx";
@@ -51,13 +49,6 @@ export default function HistoryDetailPage() {
     ? entry.lifecycles.find((lc) => lc.id === activeSubId)?.label ?? activePrimaryTab.label
     : activePrimaryTab?.label ?? "";
 
-  const [copied, setCopied] = useState(false);
-  const handleCopyActive = async () => {
-    await copyToClipboard(getTabContent(entry, activePrimaryId, activeSubId));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
   return (
     <div className={styles.page}>
       <BackLink />
@@ -80,18 +71,10 @@ export default function HistoryDetailPage() {
             {entry.savedAt}
             {entry.version ? ` · v${entry.version}` : ""}
           </span>
-          <div className={styles.copyWrap}>
-            <Button
-              variant="primary"
-              size="icon"
-              aria-label={`${activeCopyLabel} 코드 복사`}
-              title={`${activeCopyLabel} 코드 복사`}
-              onClick={handleCopyActive}
-            >
-              <Icon name={copied ? "check" : "copy"} size={14} />
-            </Button>
-            {copied && <span className={styles.copiedToast}>복사되었습니다</span>}
-          </div>
+          <CopyButton
+            text={getTabContent(entry, activePrimaryId, activeSubId)}
+            label={`${activeCopyLabel} 코드 복사`}
+          />
         </div>
       </div>
 

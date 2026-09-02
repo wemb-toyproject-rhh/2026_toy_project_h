@@ -12,8 +12,6 @@ export default function VersionSelectBar({ versionA, versionB }) {
         </select>
       </div>
 
-      <span className={styles.vs}>VS</span>
-
       <div className={styles.field}>
         <label className={styles.label}>버전 B</label>
         <select className={styles.select} defaultValue={versionB?.id}>

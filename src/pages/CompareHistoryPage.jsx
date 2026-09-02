@@ -23,11 +23,15 @@ export default function CompareHistoryPage() {
     versionA.lifecycles.find((lc) => lc.modified)?.id ?? versionA.lifecycles[0]?.id,
   );
 
-  const { left, right } = useMemo(() => {
-    const codeA = getTabContent(versionA, activePrimaryId, activeSubId);
-    const codeB = getTabContent(versionB, activePrimaryId, activeSubId);
-    return computeDiff(codeA, codeB);
-  }, [versionA, versionB, activePrimaryId, activeSubId]);
+  const codeA = useMemo(
+    () => getTabContent(versionA, activePrimaryId, activeSubId),
+    [versionA, activePrimaryId, activeSubId],
+  );
+  const codeB = useMemo(
+    () => getTabContent(versionB, activePrimaryId, activeSubId),
+    [versionB, activePrimaryId, activeSubId],
+  );
+  const { left, right } = useMemo(() => computeDiff(codeA, codeB), [codeA, codeB]);
 
   return (
     <div className={styles.page}>
@@ -42,11 +46,12 @@ export default function CompareHistoryPage() {
         activeSubId={activeSubId}
         onPrimaryChange={setActivePrimaryId}
         onSubChange={setActiveSubId}
+        legendText="버전 간 달라진 스크립트"
       />
 
       <SideBySideDiff
-        left={{ label: `버전 A · ${versionA.targetLabel}`, lines: left }}
-        right={{ label: `버전 B · ${versionB.targetLabel}`, lines: right }}
+        left={{ label: `버전 A · ${versionA.targetLabel}`, lines: left, code: codeA }}
+        right={{ label: `버전 B · ${versionB.targetLabel}`, lines: right, code: codeB }}
       />
     </div>
   );
