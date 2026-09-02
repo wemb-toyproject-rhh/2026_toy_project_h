@@ -4,6 +4,7 @@ import { filterEntriesByTarget, getEntryById, getTabContent } from "../mocks/his
 import { computeDiff } from "../utils/diff.js";
 import BackLink from "../components/common/BackLink.jsx";
 import ScrollToTopButton from "../components/common/ScrollToTopButton.jsx";
+import DiffStatBadge from "../components/common/DiffStatBadge.jsx";
 import SubTabGroup from "../components/detail/SubTabGroup.jsx";
 import SideBySideDiff from "../components/compare/SideBySideDiff.jsx";
 import styles from "./CompareHistoryPage.module.css";
@@ -48,6 +49,14 @@ export default function CompareHistoryPage() {
   );
   const { left, right } = useMemo(() => computeDiff(codeA, codeB), [codeA, codeB]);
 
+  const diffStats = useMemo(
+    () => ({
+      additions: right.filter((line) => line.type === "add").length,
+      deletions: left.filter((line) => line.type === "del").length,
+    }),
+    [left, right],
+  );
+
   return (
     <div className={styles.page}>
       <BackLink />
@@ -60,6 +69,9 @@ export default function CompareHistoryPage() {
         onPrimaryChange={setActivePrimaryId}
         onSubChange={setActiveSubId}
         legendText="버전 간 달라진 스크립트"
+        diffBadge={
+          <DiffStatBadge additions={diffStats.additions} deletions={diffStats.deletions} />
+        }
       />
 
       <SideBySideDiff

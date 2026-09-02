@@ -1,7 +1,6 @@
 import { useMemo, useReducer, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-  getDiffStats,
   getEntryById,
   getPrevTabContent,
   getTabContent,
@@ -37,7 +36,15 @@ export default function HistoryDetailPage() {
     return computeDiff(prev, current).unified;
   }, [entry, activePrimaryId, activeSubId]);
 
-  const diffStats = useMemo(() => getDiffStats(entry), [entry]);
+  const diffStats = useMemo(() => {
+    let additions = 0;
+    let deletions = 0;
+    diffLines.forEach((line) => {
+      if (line.type === "add") additions += 1;
+      else if (line.type === "del") deletions += 1;
+    });
+    return { additions, deletions };
+  }, [diffLines]);
 
   const note = {
     summary: entry.comment || "작성된 설명이 없습니다.",

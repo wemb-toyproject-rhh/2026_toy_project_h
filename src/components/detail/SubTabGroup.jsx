@@ -36,8 +36,8 @@ export default function SubTabGroup({
         ))}
       </div>
 
-      {showSubTabs && (
-        <div className={styles.subTabsRow}>
+      <div className={styles.subTabsRow}>
+        {showSubTabs ? (
           <div className={styles.subTabs}>
             {lifecycles.map((tab) => (
               <button
@@ -50,9 +50,11 @@ export default function SubTabGroup({
               </button>
             ))}
           </div>
-          {diffBadge}
-        </div>
-      )}
+        ) : (
+          <span />
+        )}
+        {diffBadge}
+      </div>
     </div>
   );
 }
