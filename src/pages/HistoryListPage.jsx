@@ -14,6 +14,7 @@ export default function HistoryListPage() {
   const [sortOrder, setSortOrder] = useState("desc");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [typeFilters, setTypeFilters] = useState({ css: false, html: false, js: false });
   const [filterOpen, setFilterOpen] = useState(false);
   const filterWrapRef = useRef(null);
 
@@ -45,6 +46,8 @@ export default function HistoryListPage() {
     ? historyEntries.find((entry) => entry.targetId === targetId)?.targetLabel
     : null;
 
+  const activeTypes = Object.keys(typeFilters).filter((type) => typeFilters[type]);
+
   const entries = useMemo(() => {
     let list = filterEntriesByTarget(targetId);
 
@@ -56,18 +59,27 @@ export default function HistoryListPage() {
       const to = new Date(`${dateTo}T23:59:59.999`);
       list = list.filter((entry) => new Date(entry.savedAtRaw) <= to);
     }
+    if (activeTypes.length > 0) {
+      list = list.filter((entry) =>
+        entry.primaryTabs.some((tab) => activeTypes.includes(tab.id) && tab.modified),
+      );
+    }
 
     return [...list].sort((a, b) => {
       const diff = new Date(a.savedAtRaw) - new Date(b.savedAtRaw);
       return sortOrder === "asc" ? diff : -diff;
     });
-  }, [targetId, dateFrom, dateTo, sortOrder]);
+  }, [targetId, dateFrom, dateTo, sortOrder, activeTypes]);
 
   const hasDateFilter = Boolean(dateFrom || dateTo);
+  const hasTypeFilter = activeTypes.length > 0;
   const clearDateFilter = () => {
     setDateFrom("");
     setDateTo("");
   };
+  const clearTypeFilter = () => setTypeFilters({ css: false, html: false, js: false });
+  const toggleTypeFilter = (type) =>
+    setTypeFilters((prev) => ({ ...prev, [type]: !prev[type] }));
   const toggleSortOrder = () => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
 
   const toggleSelect = (id) => {
@@ -79,6 +91,7 @@ export default function HistoryListPage() {
   };
 
   const canCompare = selectedIds.length === 2;
+  const clearSelection = () => setSelectedIds([]);
 
   return (
     <div className={styles.page}>
@@ -90,8 +103,8 @@ export default function HistoryListPage() {
           aria-expanded={filterOpen}
           onClick={() => setFilterOpen((v) => !v)}
         >
-          기간
-          {hasDateFilter && <span className={styles.filterDot} />}
+          필터
+          {(hasDateFilter || hasTypeFilter) && <span className={styles.filterDot} />}
           <Icon name="chevron" size={10} className={styles.filterChevron} />
         </button>
 
@@ -106,6 +119,41 @@ export default function HistoryListPage() {
 
         {filterOpen && (
           <div className={styles.filterPanel}>
+            <div className={styles.filterSection}>
+              <span className={styles.filterLabel}>변경 유형</span>
+              <div className={styles.typeChips}>
+                <button
+                  type="button"
+                  className={`${styles.typeChip} ${typeFilters.css ? styles.active : ""}`}
+                  onClick={() => toggleTypeFilter("css")}
+                >
+                  <span className={`${styles.typeDot} ${styles.typeDotCss}`} />
+                  CSS
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.typeChip} ${typeFilters.html ? styles.active : ""}`}
+                  onClick={() => toggleTypeFilter("html")}
+                >
+                  <span className={`${styles.typeDot} ${styles.typeDotHtml}`} />
+                  HTML
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.typeChip} ${typeFilters.js ? styles.active : ""}`}
+                  onClick={() => toggleTypeFilter("js")}
+                >
+                  <span className={`${styles.typeDot} ${styles.typeDotJs}`} />
+                  JAVASCRIPT
+                </button>
+              </div>
+              {hasTypeFilter && (
+                <button type="button" className={styles.dateReset} onClick={clearTypeFilter}>
+                  유형 초기화
+                </button>
+              )}
+            </div>
+
             <div className={styles.filterSection}>
               <span className={styles.filterLabel}>기간</span>
               <div className={styles.dateRange}>
@@ -159,6 +207,15 @@ export default function HistoryListPage() {
             >
               선택한 이력 Diff 비교 ({selectedIds.length}/2)
             </Button>
+            <button
+              type="button"
+              className={styles.selectionClear}
+              onClick={clearSelection}
+              aria-label="선택 취소"
+              title="선택 취소"
+            >
+              <Icon name="close" size={12} />
+            </button>
           </div>
         </div>
       )}

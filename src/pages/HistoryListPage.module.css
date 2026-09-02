@@ -114,12 +114,67 @@
   gap: 6px;
 }
 
+.filterSection + .filterSection {
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
 .filterLabel {
   font-size: 11.5px;
   font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.typeChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.typeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+.typeChip:hover {
+  border-color: var(--color-accent);
+}
+
+.typeChip.active {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent-soft-text);
+}
+
+.typeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.typeDotCss {
+  background: #4c8fd4;
+}
+
+.typeDotHtml {
+  background: #d9784f;
+}
+
+.typeDotJs {
+  background: #e0b23c;
 }
 
 .listSection {
@@ -261,6 +316,27 @@
   font-weight: 600;
   color: var(--color-text-secondary);
   white-space: nowrap;
+}
+
+.selectionClear {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.selectionClear:hover {
+  color: var(--color-text);
+  background: var(--color-surface-sunken);
 }
 
 @keyframes selectionBarIn {
