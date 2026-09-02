@@ -93,6 +93,13 @@
   white-space: nowrap;
 }
 
+.tagsRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;

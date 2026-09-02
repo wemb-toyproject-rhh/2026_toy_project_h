@@ -3,6 +3,7 @@ import Badge from "../common/Badge.jsx";
 import Button from "../common/Button.jsx";
 import Icon from "../common/Icon.jsx";
 import EditableTitle from "../common/EditableTitle.jsx";
+import DiffStatBadge from "../common/DiffStatBadge.jsx";
 import styles from "./PRCard.module.css";
 
 export default function PRCard({
@@ -88,14 +89,17 @@ export default function PRCard({
           </div>
         </div>
 
-        {item.changedPaths?.length > 0 && (
-          <div className={styles.tags}>
-            {item.changedPaths.map((path) => (
-              <span key={path} className={styles.tag}>
-                <span className={styles.tagDot} />
-                {path}
-              </span>
-            ))}
+        {(item.changedPaths?.length > 0 || item.additions + item.deletions > 0) && (
+          <div className={styles.tagsRow}>
+            <div className={styles.tags}>
+              {item.changedPaths?.map((path) => (
+                <span key={path} className={styles.tag}>
+                  <span className={styles.tagDot} />
+                  {path}
+                </span>
+              ))}
+            </div>
+            <DiffStatBadge additions={item.additions} deletions={item.deletions} />
           </div>
         )}
       </div>

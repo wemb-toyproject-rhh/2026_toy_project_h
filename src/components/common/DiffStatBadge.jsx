@@ -6,8 +6,8 @@ export default function DiffStatBadge({ additions = 0, deletions = 0 }) {
 
   return (
     <span className={styles.badge} title={`+${additions} -${deletions}`}>
-      <span className={styles.add}>+{additions}</span>
-      <span className={styles.del}>-{deletions}</span>
+      <span className={`${styles.pill} ${styles.add}`}>+{additions}</span>
+      <span className={`${styles.pill} ${styles.del}`}>-{deletions}</span>
     </span>
   );
 }

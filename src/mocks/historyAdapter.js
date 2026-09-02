@@ -3,6 +3,7 @@
 // real API replaces the mock tables below.
 import tbPageHist from "./db/tbPageHist.js";
 import tbInstanceHist from "./db/tbInstanceHist.js";
+import { computeDiff } from "../utils/diff.js";
 
 const ICON_BY_KIND = { page: "page", "2D": "component2d", "3D": "component3d" };
 
@@ -54,6 +55,23 @@ function buildChangedPaths(primaryTabs, lifecycles) {
   return paths;
 }
 
+// Total added/removed line counts across every diffable field of an entry
+// (CSS, HTML, and each lifecycle script) — used for the list page's +N -M
+// stat badge, which summarizes the whole entry rather than a single tab.
+function countDiffStats(pairs) {
+  let additions = 0;
+  let deletions = 0;
+
+  pairs.forEach(([prev, current]) => {
+    computeDiff(prev, current).unified.forEach((line) => {
+      if (line.type === "add") additions += 1;
+      else if (line.type === "del") deletions += 1;
+    });
+  });
+
+  return { additions, deletions };
+}
+
 function buildLifecycles(row, prevRow, lifecycleDefs) {
   return lifecycleDefs.map((lc) => {
     const content = row[lc.field] ?? "";
@@ -94,6 +112,11 @@ function buildPageEntries() {
         },
       ];
 
+      const diffStats = countDiffStats([
+        [prevCssCode, cssCode],
+        ...lifecycles.map((lc) => [lc.prevContent, lc.content]),
+      ]);
+
       entries.push({
         id: `page-${row.hist_id}`,
         histId: row.hist_id,
@@ -114,6 +137,8 @@ function buildPageEntries() {
         htmlCode: "",
         prevHtmlCode: "",
         changedPaths: buildChangedPaths(primaryTabs, lifecycles),
+        additions: diffStats.additions,
+        deletions: diffStats.deletions,
       });
     });
   }
@@ -156,6 +181,12 @@ function buildInstanceEntries() {
             },
           ];
 
+      const diffStats = countDiffStats([
+        [prevHtmlCode, htmlCode],
+        [prevCssCode, cssCode],
+        ...lifecycles.map((lc) => [lc.prevContent, lc.content]),
+      ]);
+
       entries.push({
         id: `inst-${row.hist_id}`,
         histId: row.hist_id,
@@ -177,6 +208,8 @@ function buildInstanceEntries() {
         htmlCode,
         prevHtmlCode,
         changedPaths: buildChangedPaths(primaryTabs, lifecycles),
+        additions: diffStats.additions,
+        deletions: diffStats.deletions,
       });
     });
   }
