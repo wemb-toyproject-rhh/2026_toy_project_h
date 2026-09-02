@@ -68,6 +68,19 @@ const ICONS = {
       <rect x="9" y="9" width="5.5" height="5.5" rx="1" fill="currentColor" />
     </>
   ),
+  search: (
+    <>
+      <circle
+        cx="7"
+        cy="7"
+        r="4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <path d="M10.3 10.3 13.5 13.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </>
+  ),
   chevron: (
     <path
       d="M5 3.5 9.5 8 5 12.5"
@@ -137,7 +150,42 @@ const ICONS = {
   ),
 };
 
-export default function Icon({ name, size = 14, className = "" }) {
+export default function Icon({ name, size = 14, className = "", direction }) {
+  if (name === "sortArrows") {
+    const upColor = direction === "asc" ? "var(--color-accent)" : "currentColor";
+    const downColor = direction === "desc" ? "var(--color-accent)" : "currentColor";
+
+    return (
+      <svg
+        className={className}
+        width={size}
+        height={size}
+        viewBox="0 0 16 16"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M5 12V4" stroke={upColor} strokeWidth="1.3" strokeLinecap="round" />
+        <path
+          d="M3 6.5 5 4l2 2.5"
+          fill="none"
+          stroke={upColor}
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M11 4v8" stroke={downColor} strokeWidth="1.3" strokeLinecap="round" />
+        <path
+          d="M9 9.5 11 12l2-2.5"
+          fill="none"
+          stroke={downColor}
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
   const content = ICONS[name];
   if (!content) return null;
 
