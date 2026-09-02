@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { filterEntriesByTarget, getEntryById, getTabContent } from "../mocks/historyAdapter.js";
 import { computeDiff } from "../utils/diff.js";
 import BackLink from "../components/common/BackLink.jsx";
+import ScrollToTopButton from "../components/common/ScrollToTopButton.jsx";
 import SubTabGroup from "../components/detail/SubTabGroup.jsx";
 import SideBySideDiff from "../components/compare/SideBySideDiff.jsx";
 import styles from "./CompareHistoryPage.module.css";
@@ -72,6 +73,8 @@ export default function CompareHistoryPage() {
           onSelect: setIdB,
         }}
       />
+
+      <ScrollToTopButton />
     </div>
   );
 }
