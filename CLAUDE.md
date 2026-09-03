@@ -28,7 +28,7 @@ src/
 
 ## Architecture & Data Context
 
-- **DB Trigger Integration:** RENOBIT core DB triggers auto-save script logs into `tb_page_hist` & `tb_instance_hist`.
+- **DB Trigger Integration (⚠️ Local Simulation Only, Not Native RENOBIT):** `tb_page_hist` / `tb_instance_hist`는 RENOBIT 제품 자체에 존재하는 테이블이 아님. 실제 RENOBIT은 `TB_PAGE` / `TB_INSTANCE`에 상태를 저장하며 히스토리 테이블이 없음 (CSS/JS/HTML 스크립트도 개별 컬럼이 아니라 `PROPS` JSON 컬럼 안에 들어있음). 현재 두 테이블은 별도 로컬 개발 DB에 수동 설치한 트리거로 시뮬레이션한 것이며, 실제 상용 연동 시에는 이 가정을 재검토해야 함.
 - **Local Simulation Setup:** Target RENOBIT DB triggers auto-save page history on local environment for demo.
 - **Target Hierarchies & Lifecycle:**
   - Page: `CSS` / `JS` (`beforeLoad`, `loaded`, `beforeUnLoad`)
