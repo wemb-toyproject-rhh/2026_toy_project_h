@@ -12,32 +12,16 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 22px;
   min-width: 0;
 }
 
 .logo {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: var(--color-accent);
-  color: var(--color-text-on-accent);
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.title {
-  font-size: 15px;
   letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-
-.divider {
-  color: var(--color-border-strong);
+  color: var(--color-accent);
+  flex-shrink: 0;
 }
 
 .project {
@@ -48,19 +32,26 @@
   white-space: nowrap;
 }
 
+.rightGroup {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
 .switcher {
   display: flex;
   gap: 2px;
   background: var(--color-surface-sunken);
   padding: 3px;
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   border: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
 .switchBtn {
   padding: 7px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
@@ -71,11 +62,29 @@
 }
 
 .switchBtn:hover {
+  background: var(--color-border);
   color: var(--color-text);
 }
 
+/* 현재 보고 있는 화면 */
 .switchBtn.active {
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: #4a5160;
+  color: #ffffff;
   box-shadow: var(--shadow-xs);
+}
+
+.switchBtn.active:hover {
+  background: #383e4a;
+  color: #ffffff;
+}
+
+/* 목록에서 항목을 고르기 전의 '이력 상세' */
+.switchBtn.disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.switchBtn.disabled:hover {
+  background: transparent;
+  color: var(--color-text-muted);
 }

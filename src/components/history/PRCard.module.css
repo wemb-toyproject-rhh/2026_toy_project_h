@@ -25,6 +25,11 @@
   flex-shrink: 0;
 }
 
+.checkbox:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .body {
   flex: 1;
   min-width: 0;
@@ -35,16 +40,16 @@
 
 .topRow {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 
 .titleGroup {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 18px;
   min-width: 0;
+  flex: 1;
 }
 
 .title {
@@ -55,6 +60,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 0 1 auto;
 }
 
 .title:hover {
@@ -62,41 +68,198 @@
   text-decoration: underline;
 }
 
-.meta {
-  font-size: 12.5px;
+/* 비고 — 보기 모드: 제목 옆에 텍스트로 붙고, 연필 아이콘으로 수정 진입 */
+.commentView {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.commentText {
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commentEmpty {
   color: var(--color-text-muted);
+  font-style: italic;
 }
 
-.changes {
-  background: var(--color-surface-sunken);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+.editIcon {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  padding: 2px;
 }
 
-.changeRow {
-  font-size: 12.5px;
-  color: var(--color-text-secondary);
+.card:hover .editIcon,
+.editIcon:focus-visible {
+  opacity: 1;
+}
+
+.editIcon:hover {
+  color: var(--color-accent);
+}
+
+/* 비고 — 편집 모드: 밑줄 인라인 입력 + 아이콘 버튼 */
+.commentEdit {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
 }
 
-.changeRow strong {
+.commentEditInput {
+  flex: 1 1 auto;
+  min-width: 80px;
+  max-width: 420px;
+  padding: 2px 2px 3px;
+  border: none;
+  border-bottom: 1px solid var(--color-accent);
+  border-radius: 0;
+  background: var(--color-accent-soft);
   color: var(--color-text);
+  font-size: 13.5px;
   font-weight: 600;
+  font-family: inherit;
+  outline: none;
 }
 
-.changePath {
+.iconBtn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-success);
+}
+
+.iconBtn:hover:not(:disabled) {
+  background: var(--color-success-soft);
+}
+
+.iconBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.iconBtnCancel {
   color: var(--color-text-muted);
 }
 
-.dot {
-  width: 6px;
-  height: 6px;
+.iconBtnCancel:hover:not(:disabled) {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.commentError {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+/* 삭제 — 휴지통 아이콘 버튼 */
+.deleteBtn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.deleteBtn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.deleteBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.actionsCol {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.diffStats {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.diffAdded {
+  color: #2b8a3e;
+}
+
+.diffRemoved {
+  color: #c92a2a;
+}
+
+.meta {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+/* 변경 태그 — CSS/라이프사이클을 한 줄로 나열 */
+.changes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 6px;
+  column-gap: 16px;
+}
+
+.changeTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.tagDot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--color-danger);
   flex-shrink: 0;
 }

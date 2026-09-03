@@ -4,3 +4,8 @@ dist-ssr
 *.local
 .vscode/*
 !.vscode/extensions.json
+
+# 환경 변수 (DB 접속 정보) - 절대 커밋하지 마세요
+.env
+.env.*
+!.env.example

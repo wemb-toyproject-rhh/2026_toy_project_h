@@ -13,8 +13,8 @@
       "author": "홍길동",
       "savedAt": "2026-08-31 10:20:15",
       "changes": [
-        { "target": "[Page: main]", "path": "JS · beforeLoad" },
-        { "target": "[Comp: 1f-cooler]", "path": "JS · register" }
+        { "type": "JS", "label": "JS · beforeLoad" },
+        { "type": "JS", "label": "JS · register" }
       ]
     },
     {
@@ -22,14 +22,14 @@
       "title": "[3D] 1층 냉각실 이벤트 예외 처리",
       "author": "김철수",
       "savedAt": "2026-08-31 09:15:00",
-      "changes": [{ "target": "[3D: 1f-transformer]", "path": "JS · register" }]
+      "changes": [{ "type": "JS", "label": "JS · register" }]
     },
     {
       "id": 10,
       "title": "[Page: main] 대시보드 진입 애니메이션 개선",
       "author": "이영희",
       "savedAt": "2026-08-30 15:00:41",
-      "changes": [{ "target": "[Page: main]", "path": "JS · beforeLoad" }]
+      "changes": [{ "type": "JS", "label": "JS · beforeLoad" }]
     }
   ]
 }
