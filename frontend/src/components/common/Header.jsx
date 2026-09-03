@@ -19,6 +19,11 @@ export default function Header() {
       <div className={styles.metaCol}>
         <span className={styles.project}>프로젝트: 스마트 관제 (main)</span>
       </div>
+      <div className={styles.actionCol}>
+        <Link to="/login" className={styles.logout}>
+          로그아웃
+        </Link>
+      </div>
     </header>
   );
 }
