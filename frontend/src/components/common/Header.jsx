@@ -20,6 +20,7 @@ export default function Header() {
         <span className={styles.project}>프로젝트: 스마트 관제 (main)</span>
       </div>
       <div className={styles.actionCol}>
+        <span className={styles.user}>kim.dev</span>
         <Link to="/login" className={styles.logout}>
           로그아웃
         </Link>
