@@ -30,9 +30,6 @@ export default function SidebarFilter() {
             title={all.label}
           >
             <span className={styles.itemLabel}>
-              <span className={styles.icon}>
-                <Icon name={all.icon} />
-              </span>
               <span className={styles.labelText}>{all.label}</span>
             </span>
             <span className={styles.count}>{all.count}</span>
@@ -67,9 +64,7 @@ export default function SidebarFilter() {
                   title={page.label}
                 >
                   <span className={styles.itemLabel}>
-                    <span className={styles.icon}>
-                      <Icon name={page.icon} />
-                    </span>
+                    <span className={styles.typeTag}>{page.typeLabel}</span>
                     <span className={styles.labelText}>{page.label}</span>
                   </span>
                   <span className={styles.count}>{page.count}</span>
@@ -87,9 +82,7 @@ export default function SidebarFilter() {
                   >
                     <span className={styles.itemLabel}>
                       <span className={styles.treeBranch} />
-                      <span className={styles.icon}>
-                        <Icon name={child.icon} />
-                      </span>
+                      <span className={styles.typeTag}>{child.typeLabel}</span>
                       <span className={styles.labelText}>{child.label}</span>
                     </span>
                     <span className={styles.count}>{child.count}</span>

@@ -6,6 +6,7 @@ import tbInstanceHist from "./db/tbInstanceHist.js";
 import { computeDiff } from "../utils/diff.js";
 
 const ICON_BY_KIND = { page: "page", "2D": "component2d", "3D": "component3d" };
+const TYPE_LABEL_BY_KIND = { page: "Page", "2D": "2D", "3D": "3D" };
 
 const PAGE_LIFECYCLES = [
   { id: "beforeLoad", label: "beforeLoad", field: "lc_before_load" },
@@ -259,6 +260,7 @@ export function buildTargetTree() {
         pages.set(entry.targetId, {
           id: entry.targetId,
           icon: ICON_BY_KIND.page,
+          typeLabel: TYPE_LABEL_BY_KIND.page,
           label: entry.targetName,
           count: 0,
         });
@@ -274,6 +276,7 @@ export function buildTargetTree() {
       bucket.set(entry.targetId, {
         id: entry.targetId,
         icon: ICON_BY_KIND[entry.kind] ?? "•",
+        typeLabel: TYPE_LABEL_BY_KIND[entry.kind] ?? entry.kind,
         label: entry.targetName,
         count: 0,
       });
