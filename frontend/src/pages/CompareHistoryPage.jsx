@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { filterEntriesByTarget, getEntryById, getTabContent } from "../mocks/historyAdapter.js";
 import { computeDiff } from "../utils/diff.js";
+import Badge from "../components/common/Badge.jsx";
 import BackLink from "../components/common/BackLink.jsx";
 import ScrollToTopButton from "../components/common/ScrollToTopButton.jsx";
 import DiffStatBadge from "../components/common/DiffStatBadge.jsx";
@@ -70,6 +71,10 @@ export default function CompareHistoryPage() {
     <div className={styles.page}>
       <BackLink />
 
+      <div className={styles.header}>
+        <Badge tone="accent">{olderVersion.targetLabel}</Badge>
+      </div>
+
       <SubTabGroup
         primaryTabs={olderVersion.primaryTabs}
         lifecycles={olderVersion.lifecycles}
@@ -85,7 +90,8 @@ export default function CompareHistoryPage() {
 
       <SideBySideDiff
         left={{
-          label: `이전 버전 · ${olderVersion.targetLabel}`,
+          kind: "이전 버전",
+          label: olderVersion.title,
           meta: formatVersionMeta(olderVersion),
           lines: left,
           code: codeOld,
@@ -93,7 +99,8 @@ export default function CompareHistoryPage() {
           onSelect: setOlderId,
         }}
         right={{
-          label: `최신 버전 · ${newerVersion.targetLabel}`,
+          kind: "최신 버전",
+          label: newerVersion.title,
           meta: formatVersionMeta(newerVersion),
           lines: right,
           code: codeNew,

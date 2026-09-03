@@ -8,6 +8,7 @@ export default function SideBySideDiff({ left, right }) {
     <div className={styles.grid}>
       {[left, right].map((pane, idx) => (
         <div key={idx} className={styles.pane}>
+          <span className={styles.paneKind}>{pane.kind}</span>
           <div className={styles.paneHeader}>
             <VersionSelect
               label={pane.label}
