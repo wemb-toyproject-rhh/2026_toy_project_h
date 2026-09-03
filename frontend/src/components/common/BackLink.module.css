@@ -1,0 +1,15 @@
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  width: fit-content;
+  flex-shrink: 0;
+}
+
+.link:hover {
+  color: var(--color-accent);
+}

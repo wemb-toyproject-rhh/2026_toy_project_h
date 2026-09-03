@@ -1,0 +1,44 @@
+.diff {
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-sm);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  padding: 6px 0;
+}
+
+.line {
+  display: flex;
+  padding: 0 12px;
+  white-space: pre;
+}
+
+.gutter {
+  width: 34px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  text-align: right;
+  margin-right: 10px;
+  user-select: none;
+}
+
+.marker {
+  width: 12px;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.code {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.add {
+  background: var(--color-diff-add-bg);
+  color: var(--color-diff-add-text);
+}
+
+.del {
+  background: var(--color-diff-del-bg);
+  color: var(--color-diff-del-text);
+}

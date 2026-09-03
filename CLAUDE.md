@@ -9,26 +9,36 @@
 
 ## Project Directory Structure
 
+npm workspaces monorepo — root `package.json` lists `frontend` and `backend` as workspaces; `npm install` at the repo root installs both.
+
 ```text
-src/
-├── assets/          # Static files (images, icons)
-├── components/      # Reusable UI components
-│   ├── common/      # Generic UI (Buttons, Modals, Tabs, Badges)
-│   ├── history/     # View 1: HistoryList, PRCard, SidebarFilter
-│   ├── detail/      # View 2: HistoryDetail, ConversationPanel, SubTabGroup
-│   └── compare/     # View 3: VersionCompare, SideBySideDiff
-├── services/        # API call functions & Axios setup
-├── mocks/           # Mock data JSONs (mockHistory.json, etc.)
-├── hooks/           # Custom React Hooks
-├── pages/           # Main Page layouts (HistoryPage)
-├── styles/          # Global styles & CSS variables
-├── App.jsx          # Root component & Route handling
-└── main.jsx         # Entry point
+frontend/            # React/Vite SPA (this is the only workspace implemented so far)
+├── index.html
+├── vite.config.js   # dev proxy: /api -> http://localhost:4000 (backend)
+└── src/
+    ├── assets/          # Static files (images, icons)
+    ├── components/      # Reusable UI components
+    │   ├── common/      # Generic UI (Buttons, Modals, Tabs, Badges)
+    │   ├── history/     # View 1: HistoryList, PRCard, SidebarFilter
+    │   ├── detail/      # View 2: HistoryDetail, ConversationPanel, SubTabGroup
+    │   └── compare/     # View 3: VersionCompare, SideBySideDiff
+    ├── services/        # API call functions & Axios setup
+    ├── mocks/           # Mock data JSONs (mockHistory.json, etc.)
+    ├── hooks/           # Custom React Hooks
+    ├── pages/           # Main Page layouts (HistoryPage)
+    ├── styles/          # Global styles & CSS variables
+    ├── App.jsx          # Root component & Route handling
+    └── main.jsx         # Entry point
+
+backend/             # Node API server — owned by a separate teammate; internal
+├── .env.example     # structure is theirs to design, not dictated here
+└── src/
+    └── server.js
 ```
 
 ## Architecture & Data Context
 
-- **DB Trigger Integration:** RENOBIT core DB triggers auto-save script logs into `tb_page_hist` & `tb_instance_hist`.
+- **DB Trigger Integration (⚠️ Local Simulation Only, Not Native RENOBIT):** `tb_page_hist` / `tb_instance_hist`는 RENOBIT 제품 자체에 존재하는 테이블이 아님. 실제 RENOBIT은 `TB_PAGE` / `TB_INSTANCE`에 상태를 저장하며 히스토리 테이블이 없음 (CSS/JS/HTML 스크립트도 개별 컬럼이 아니라 `PROPS` JSON 컬럼 안에 들어있음). 현재 두 테이블은 별도 로컬 개발 DB에 수동 설치한 트리거로 시뮬레이션한 것이며, 실제 상용 연동 시에는 이 가정을 재검토해야 함.
 - **Local Simulation Setup:** Target RENOBIT DB triggers auto-save page history on local environment for demo.
 - **Target Hierarchies & Lifecycle:**
   - Page: `CSS` / `JS` (`beforeLoad`, `loaded`, `beforeUnLoad`)
@@ -37,9 +47,12 @@ src/
 
 ## Essential Commands
 
-- `npm run dev`: Start Vite development server
-- `npm run build`: Build production SPA bundle
-- `npm run lint`: Run ESLint checks
+Run from the repo root (workspaces-aware):
+
+- `npm run dev`: Start Vite development server (frontend workspace)
+- `npm run dev:api`: Start the backend API server (backend workspace — not yet implemented)
+- `npm run build`: Build production SPA bundle (frontend workspace)
+- `npm run lint`: Run ESLint checks (frontend workspace)
 
 ## Code & Conventions Guidelines
 
@@ -52,6 +65,8 @@ src/
 - **Token Efficiency:** When modifying code, focus strictly on requested UI component files or API services. Do NOT scan irrelevant files unnecessarily.
 
 ## Backend Integration API Protocol (Draft / Mock Data Compatible)
+
+Owned by the backend teammate; contract below is what the frontend expects.
 
 - `GET /api/history`: Fetch PR history list (supports target filtering by page/component)
 - `GET /api/history/:id`: Fetch specific PR snapshot & script diffs
