@@ -1,0 +1,15 @@
+{
+  "name": "renobit-history-hub",
+  "private": true,
+  "version": "0.0.1",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=frontend",
+    "dev:api": "npm run dev --workspace=backend",
+    "build": "npm run build --workspace=frontend",
+    "lint": "npm run lint --workspace=frontend"
+  }
+}
