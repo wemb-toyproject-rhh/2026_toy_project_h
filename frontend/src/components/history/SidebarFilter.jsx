@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { buildTargetTree, getEntryById } from "../../mocks/historyAdapter.js";
+import { buildTargetTree, getEntryById } from "../../services/historyAdapter.js";
+import { useHistory } from "../../context/HistoryContext.jsx";
 import Icon from "../common/Icon.jsx";
 import DbStatus from "../common/DbStatus.jsx";
 import styles from "./SidebarFilter.module.css";
@@ -9,6 +10,7 @@ export default function SidebarFilter() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { id } = useParams();
+  const { entries } = useHistory();
   const [collapsedIds, setCollapsedIds] = useState(new Set());
 
   // Detail/compare pages don't carry a "target" query param of their own —
@@ -17,16 +19,16 @@ export default function SidebarFilter() {
   // at one specific page/component.
   const activeTarget = useMemo(() => {
     if (location.pathname.startsWith("/history/") && id) {
-      return getEntryById(id)?.targetId ?? "all";
+      return getEntryById(entries, id)?.targetId ?? "all";
     }
     if (location.pathname === "/compare") {
       const compareId = location.state?.ids?.[0];
-      return (compareId && getEntryById(compareId)?.targetId) ?? "all";
+      return (compareId && getEntryById(entries, compareId)?.targetId) ?? "all";
     }
     return searchParams.get("target") ?? "all";
-  }, [location.pathname, location.state, id, searchParams]);
+  }, [location.pathname, location.state, id, searchParams, entries]);
 
-  const { all, pages } = buildTargetTree();
+  const { all, pages } = buildTargetTree(entries);
 
   const toggleCollapsed = pageId => {
     setCollapsedIds(prev => {

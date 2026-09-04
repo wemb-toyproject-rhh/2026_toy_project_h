@@ -1,10 +1,7 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  filterEntriesByTarget,
-  historyEntries,
-  updateEntryTitle,
-} from "../mocks/historyAdapter.js";
+import { filterEntriesByTarget } from "../services/historyAdapter.js";
+import { useHistory } from "../context/HistoryContext.jsx";
 import PRCard from "../components/history/PRCard.jsx";
 import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
@@ -13,10 +10,10 @@ import styles from "./HistoryListPage.module.css";
 const TYPE_LABELS = { css: "CSS", html: "HTML", js: "JAVASCRIPT" };
 
 export default function HistoryListPage() {
+  const { entries: allEntries, loading, error, reload, updateTitle } = useHistory();
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [, forceRerender] = useReducer(n => n + 1, 0);
   const [filterOpen, setFilterOpen] = useState(false);
   const filterWrapRef = useRef(null);
 
@@ -52,13 +49,12 @@ export default function HistoryListPage() {
   }, [filterOpen]);
 
   const handleRenameTitle = (id, newTitle) => {
-    updateEntryTitle(id, newTitle);
-    forceRerender();
+    updateTitle(id, newTitle);
   };
 
   const targetId = searchParams.get("target");
   const activeTargetLabel = targetId
-    ? historyEntries.find(entry => entry.targetId === targetId)?.targetLabel
+    ? allEntries.find(entry => entry.targetId === targetId)?.targetLabel
     : null;
 
   const sortOrder = searchParams.get("sort") === "asc" ? "asc" : "desc";
@@ -74,7 +70,7 @@ export default function HistoryListPage() {
   };
 
   const entries = useMemo(() => {
-    let list = filterEntriesByTarget(targetId);
+    let list = filterEntriesByTarget(allEntries, targetId);
 
     if (dateFrom) {
       const from = new Date(dateFrom);
@@ -96,7 +92,7 @@ export default function HistoryListPage() {
       const diff = new Date(a.savedAtRaw) - new Date(b.savedAtRaw);
       return sortOrder === "asc" ? diff : -diff;
     });
-  }, [targetId, dateFrom, dateTo, sortOrder, activeTypes]);
+  }, [allEntries, targetId, dateFrom, dateTo, sortOrder, activeTypes]);
 
   const hasDateFilter = Boolean(dateFrom || dateTo);
   const hasTypeFilter = activeTypes.length > 0;
@@ -120,7 +116,7 @@ export default function HistoryListPage() {
 
   const selectedTargetId =
     selectedIds.length > 0
-      ? historyEntries.find(entry => entry.id === selectedIds[0])?.targetId
+      ? allEntries.find(entry => entry.id === selectedIds[0])?.targetId
       : null;
 
   const toggleSelect = id => {
@@ -128,8 +124,8 @@ export default function HistoryListPage() {
       if (prev.includes(id)) return prev.filter(existing => existing !== id);
       if (prev.length >= 2) return prev;
       if (prev.length === 1) {
-        const firstTargetId = historyEntries.find(entry => entry.id === prev[0])?.targetId;
-        const nextTargetId = historyEntries.find(entry => entry.id === id)?.targetId;
+        const firstTargetId = allEntries.find(entry => entry.id === prev[0])?.targetId;
+        const nextTargetId = allEntries.find(entry => entry.id === id)?.targetId;
         if (firstTargetId !== nextTargetId) return prev;
       }
       return [...prev, id];
@@ -332,6 +328,19 @@ export default function HistoryListPage() {
             {sortOrder === "asc" && <span className={styles.sortDot} />}
           </button>
         </div>
+
+        {error && (
+          <div className={styles.stateMessage}>
+            <span>{error}</span>
+            <button type="button" className={styles.stateRetry} onClick={reload}>
+              다시 시도
+            </button>
+          </div>
+        )}
+
+        {!error && loading && allEntries.length === 0 && (
+          <p className={styles.stateMessage}>이력을 불러오는 중...</p>
+        )}
 
         <div className={styles.list}>
           {entries.map(item => (
