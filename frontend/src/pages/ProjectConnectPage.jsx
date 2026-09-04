@@ -1,12 +1,21 @@
 import { useNavigate } from "react-router-dom";
+import { useProjects } from "../context/ProjectContext.jsx";
 import Button from "../components/common/Button.jsx";
 import styles from "./ProjectConnectPage.module.css";
 
 export default function ProjectConnectPage() {
   const navigate = useNavigate();
+  const { addProject } = useProjects();
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    const formData = new FormData(event.target);
+    addProject({
+      name: formData.get("projectName")?.trim() || "새 프로젝트",
+      host: formData.get("host")?.trim() ?? "",
+      port: formData.get("port")?.trim() ?? "",
+      dbname: formData.get("dbname")?.trim() ?? "",
+    });
     navigate("/");
   };
 
@@ -21,7 +30,7 @@ export default function ProjectConnectPage() {
 
         <label className={styles.field}>
           <span className={styles.label}>프로젝트 이름</span>
-          <input type="text" className={styles.input} placeholder="예: 스마트 관제" />
+          <input type="text" name="projectName" className={styles.input} placeholder="예: 스마트 관제" />
         </label>
 
         <div className={styles.divider} />
@@ -29,17 +38,17 @@ export default function ProjectConnectPage() {
         <div className={styles.row}>
           <label className={`${styles.field} ${styles.grow}`}>
             <span className={styles.label}>Host</span>
-            <input type="text" className={styles.input} placeholder="10.23.131.39" />
+            <input type="text" name="host" className={styles.input} placeholder="10.23.131.39" />
           </label>
           <label className={`${styles.field} ${styles.portField}`}>
             <span className={styles.label}>Port</span>
-            <input type="text" className={styles.input} placeholder="5434" />
+            <input type="text" name="port" className={styles.input} placeholder="5434" />
           </label>
         </div>
 
         <label className={styles.field}>
           <span className={styles.label}>DB 이름</span>
-          <input type="text" className={styles.input} placeholder="hjjo_local" />
+          <input type="text" name="dbname" className={styles.input} placeholder="hjjo_local" />
         </label>
 
         <div className={styles.row}>
