@@ -16,7 +16,7 @@ import styles from "./HistoryDetailPage.module.css";
 
 export default function HistoryDetailPage() {
   const { id } = useParams();
-  const { entries, loading, error, reload, updateTitle } = useHistory();
+  const { entries, loading, error, reload, updateMetadata } = useHistory();
   const entry = getEntryById(entries, id);
 
   const [activePrimaryId, setActivePrimaryId] = useState(null);
@@ -99,7 +99,7 @@ export default function HistoryDetailPage() {
           <EditableTitle
             value={entry.title}
             className={styles.title}
-            onSave={(newTitle) => updateTitle(entry.id, newTitle)}
+            onSave={(newTitle) => updateMetadata(entry.id, { title: newTitle })}
           />
         </div>
         <div className={styles.headerRight}>
@@ -115,7 +115,10 @@ export default function HistoryDetailPage() {
         </div>
       </div>
 
-      <ConversationPanel note={note} />
+      <ConversationPanel
+        note={note}
+        onSave={(newComment) => updateMetadata(entry.id, { comment: newComment })}
+      />
 
       <SubTabGroup
         targetLabel={entry.targetLabel}
