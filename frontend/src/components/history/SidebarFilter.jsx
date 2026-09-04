@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { buildTargetTree } from "../../mocks/historyAdapter.js";
 import Icon from "../common/Icon.jsx";
+import DbStatus from "../common/DbStatus.jsx";
 import styles from "./SidebarFilter.module.css";
 
 export default function SidebarFilter() {
@@ -93,10 +94,13 @@ export default function SidebarFilter() {
         })}
       </div>
 
-      <p className={styles.hint}>
-        페이지나 컴포넌트를 선택하면 해당 타겟의 이력만 <br></br> 필터링되어
-        표시됩니다.
-      </p>
+      <div className={styles.footer}>
+        <DbStatus />
+        <p className={styles.hint}>
+          페이지나 컴포넌트를 선택하면 해당 타겟의 이력만 <br></br> 필터링되어
+          표시됩니다.
+        </p>
+      </div>
     </aside>
   );
 }
