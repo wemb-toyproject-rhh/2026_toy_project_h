@@ -74,6 +74,7 @@ export default function HistoryDetailPage() {
         </div>
         <div className={styles.headerRight}>
           <span className={styles.meta}>
+            {entry.author ? `${entry.author} · ` : ""}
             {entry.savedAt}
             {entry.version ? ` · v${entry.version}` : ""}
           </span>

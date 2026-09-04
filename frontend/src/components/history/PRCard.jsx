@@ -73,6 +73,7 @@ export default function PRCard({
 
           <div className={styles.rightGroup}>
             <span className={styles.meta}>
+              {item.author ? `${item.author} · ` : ""}
               {item.savedAt}
               {item.version ? ` · v${item.version}` : ""}
             </span>

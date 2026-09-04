@@ -126,6 +126,7 @@ function buildPageEntries() {
         targetLabel: `[Page] ${row.name}`,
         targetName: row.name,
         title: row.comment || `${row.name} 저장`,
+        author: row.last_user ?? null,
         version: row.version ?? null,
         savedAt: formatDate(row.reg_dt),
         savedAtRaw: row.reg_dt,
