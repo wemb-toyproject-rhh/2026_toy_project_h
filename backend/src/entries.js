@@ -150,10 +150,11 @@ function buildInstanceEntry(row, prev) {
     kind: row.category,
     targetId: row.inst_id,
     pageTargetId: row.page_id ?? null,
-    targetLabel: `[${is3D ? "3D" : "2D"}] ${row.comp_name}`,
-    targetName: row.comp_name,
+    // comp_name 이 아니라 name 이 화면에 표시할 인스턴스 이름입니다 (comp_name 은 다른 값).
+    targetLabel: `[${is3D ? "3D" : "2D"}] ${row.name}`,
+    targetName: row.name,
     // title 컬럼이 비어있는 기존 행은 예전처럼 비고로 대체 표시합니다.
-    title: row.title || row.comment || `${row.comp_name} 저장`,
+    title: row.title || row.comment || `${row.name} 저장`,
     hidden: row.hidden ?? false,
     author: null, // tb_instance_hist 에는 작성자 컬럼이 없음
     version: null, // tb_instance_hist 에는 버전 컬럼이 없음
@@ -172,13 +173,15 @@ function buildInstanceEntry(row, prev) {
   };
 }
 
+// 컬럼을 하나하나 나열하지 않고 테이블 전체(*)를 가져옵니다. 이렇게 하면
+// title/hidden 처럼 나중에 컬럼이 추가돼도 SELECT 를 매번 고칠 필요가 없습니다.
+// (buildPageEntry/buildInstanceEntry 가 실제로 쓰는 필드만 골라 응답에 담으므로,
+// props 같은 무거운 컬럼이 딸려와도 API 응답 크기에는 영향이 없습니다.)
 async function fetchPageRows() {
   const { rows } = await query(`
-    SELECT p.hist_id, p.page_id, p.name, p.version,
+    SELECT p.*,
            COALESCE(u.name, p.last_user) AS author,
-           to_char(p.update_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at,
-           p.comment, p.title, p.hidden,
-           p.css_code, p.lc_before_load, p.lc_loaded, p.lc_before_unload
+           to_char(p.update_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at
     FROM tb_page_hist p
     LEFT JOIN tb_user u ON u.user_id = p.last_user
     ORDER BY p.page_id, p.hist_id ASC
@@ -188,10 +191,7 @@ async function fetchPageRows() {
 
 async function fetchInstanceRows() {
   const { rows } = await query(`
-    SELECT hist_id, inst_id, page_id, name, category, comp_name,
-           to_char(reg_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at,
-           comment, title, hidden, css_code, html_code,
-           lc_register, lc_completed, lc_before_destroy, lc_destroy, lc_preview
+    SELECT *, to_char(reg_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at
     FROM tb_instance_hist
     ORDER BY inst_id, hist_id ASC
   `);

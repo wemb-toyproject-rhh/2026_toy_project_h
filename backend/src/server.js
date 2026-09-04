@@ -14,8 +14,8 @@ const PORT = Number(process.env.PORT) || 4000;
 
 app.use(express.json({ limit: "256kb" }));
 
-// comment 컬럼은 두 테이블 다 varchar(1000) 입니다.
-const TITLE_MAX = 1000;
+// title, comment 컬럼 모두 두 테이블 다 varchar(1000) 입니다.
+const METADATA_FIELD_MAX = 1000;
 
 // id 는 "page-39" / "inst-101" 형태입니다.
 function parseId(id) {
@@ -73,26 +73,45 @@ app.get("/api/history/:id", async (req, res) => {
   }
 });
 
-// PR 제목 수정. title 컬럼에 저장하며, 비고(comment)는 건드리지 않습니다.
+// 제목(title)/비고(comment) 수정. 둘 다 선택 항목이라 넘긴 값만 저장합니다.
+//   - 전체 이력 화면(카드 인라인 수정)은 title만 보냄
+//   - 이력 상세 화면은 title / comment 를 각각 따로 보냄
 // hist_id 가 두 테이블 모두 기본키라 정확히 한 행만 바뀝니다.
 app.put("/api/history/:id/metadata", async (req, res) => {
   const parsed = parseId(req.params.id);
-  const { title } = req.body ?? {};
+  const { title, comment } = req.body ?? {};
 
   if (!parsed) {
     return res.status(400).json({ error: "id 형식이 올바르지 않습니다 (예: page-39)" });
   }
-  if (typeof title !== "string") {
-    return res.status(400).json({ error: "title 은 문자열이어야 합니다" });
+  if (title === undefined && comment === undefined) {
+    return res.status(400).json({ error: "title 또는 comment 중 하나는 있어야 합니다" });
   }
-  if (title.length > TITLE_MAX) {
-    return res.status(400).json({ error: `title 은 ${TITLE_MAX}자를 넘을 수 없습니다`, max: TITLE_MAX });
+
+  const assignments = [];
+  const values = [];
+  for (const [field, value] of [
+    ["title", title],
+    ["comment", comment],
+  ]) {
+    if (value === undefined) continue;
+    if (typeof value !== "string") {
+      return res.status(400).json({ error: `${field} 은 문자열이어야 합니다` });
+    }
+    if (value.length > METADATA_FIELD_MAX) {
+      return res
+        .status(400)
+        .json({ error: `${field} 은 ${METADATA_FIELD_MAX}자를 넘을 수 없습니다`, max: METADATA_FIELD_MAX });
+    }
+    values.push(value);
+    assignments.push(`${field} = $${values.length}`);
   }
+  values.push(parsed.histId);
 
   try {
     const result = await query(
-      `UPDATE ${parsed.table} SET title = $1 WHERE hist_id = $2 RETURNING hist_id`,
-      [title, parsed.histId],
+      `UPDATE ${parsed.table} SET ${assignments.join(", ")} WHERE hist_id = $${values.length} RETURNING hist_id`,
+      values,
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: `이력을 찾을 수 없습니다 (id=${req.params.id})` });
@@ -102,7 +121,7 @@ app.put("/api/history/:id/metadata", async (req, res) => {
     res.json(entry);
   } catch (err) {
     console.error("[PUT /api/history/:id/metadata]", err.message);
-    res.status(500).json({ error: "제목 저장 실패", detail: err.message });
+    res.status(500).json({ error: "저장 실패", detail: err.message });
   }
 });
 
