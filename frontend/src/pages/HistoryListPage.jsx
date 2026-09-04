@@ -10,7 +10,7 @@ import styles from "./HistoryListPage.module.css";
 const TYPE_LABELS = { css: "CSS", html: "HTML", js: "JAVASCRIPT" };
 
 export default function HistoryListPage() {
-  const { entries: allEntries, loading, error, reload, updateTitle } = useHistory();
+  const { entries: allEntries, loading, error, reload, updateMetadata } = useHistory();
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ export default function HistoryListPage() {
   }, [filterOpen]);
 
   const handleRenameTitle = (id, newTitle) => {
-    updateTitle(id, newTitle);
+    updateMetadata(id, { title: newTitle });
   };
 
   const targetId = searchParams.get("target");

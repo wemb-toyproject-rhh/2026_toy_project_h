@@ -21,13 +21,13 @@ export function HistoryProvider({ children }) {
     reload();
   }, [reload]);
 
-  const updateTitle = useCallback(async (id, title) => {
-    const updated = await updateHistoryMetadata(id, title);
+  const updateMetadata = useCallback(async (id, fields) => {
+    const updated = await updateHistoryMetadata(id, fields);
     setEntries((prev) => prev.map((entry) => (entry.id === id ? updated : entry)));
   }, []);
 
   return (
-    <HistoryContext.Provider value={{ entries, loading, error, reload, updateTitle }}>
+    <HistoryContext.Provider value={{ entries, loading, error, reload, updateMetadata }}>
       {children}
     </HistoryContext.Provider>
   );
