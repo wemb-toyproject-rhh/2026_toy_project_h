@@ -73,7 +73,8 @@ app.get("/api/history/:id", async (req, res) => {
   }
 });
 
-// PR 제목(= 비고) 수정. hist_id 가 두 테이블 모두 기본키라 정확히 한 행만 바뀝니다.
+// PR 제목 수정. title 컬럼에 저장하며, 비고(comment)는 건드리지 않습니다.
+// hist_id 가 두 테이블 모두 기본키라 정확히 한 행만 바뀝니다.
 app.put("/api/history/:id/metadata", async (req, res) => {
   const parsed = parseId(req.params.id);
   const { title } = req.body ?? {};
@@ -90,7 +91,7 @@ app.put("/api/history/:id/metadata", async (req, res) => {
 
   try {
     const result = await query(
-      `UPDATE ${parsed.table} SET comment = $1 WHERE hist_id = $2 RETURNING hist_id`,
+      `UPDATE ${parsed.table} SET title = $1 WHERE hist_id = $2 RETURNING hist_id`,
       [title, parsed.histId],
     );
     if (result.rowCount === 0) {
