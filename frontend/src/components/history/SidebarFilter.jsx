@@ -1,14 +1,31 @@
-import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { buildTargetTree } from "../../mocks/historyAdapter.js";
+import { useMemo, useState } from "react";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { buildTargetTree, getEntryById } from "../../mocks/historyAdapter.js";
 import Icon from "../common/Icon.jsx";
 import DbStatus from "../common/DbStatus.jsx";
 import styles from "./SidebarFilter.module.css";
 
 export default function SidebarFilter() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const { id } = useParams();
   const [collapsedIds, setCollapsedIds] = useState(new Set());
-  const activeTarget = searchParams.get("target") ?? "all";
+
+  // Detail/compare pages don't carry a "target" query param of their own —
+  // derive the sidebar's active target from whatever entry is actually being
+  // viewed there, so it doesn't fall back to "전체 이력 보기" while looking
+  // at one specific page/component.
+  const activeTarget = useMemo(() => {
+    if (location.pathname.startsWith("/history/") && id) {
+      return getEntryById(id)?.targetId ?? "all";
+    }
+    if (location.pathname === "/compare") {
+      const compareId = location.state?.ids?.[0];
+      return (compareId && getEntryById(compareId)?.targetId) ?? "all";
+    }
+    return searchParams.get("target") ?? "all";
+  }, [location.pathname, location.state, id, searchParams]);
+
   const { all, pages } = buildTargetTree();
 
   const toggleCollapsed = pageId => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   filterEntriesByTarget,
   historyEntries,
@@ -14,19 +14,24 @@ const TYPE_LABELS = { css: "CSS", html: "HTML", js: "JAVASCRIPT" };
 
 export default function HistoryListPage() {
   const [selectedIds, setSelectedIds] = useState([]);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [, forceRerender] = useReducer(n => n + 1, 0);
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [typeFilters, setTypeFilters] = useState({
-    css: false,
-    html: false,
-    js: false,
-  });
   const [filterOpen, setFilterOpen] = useState(false);
   const filterWrapRef = useRef(null);
+
+  // Filter/sort criteria live in the URL (not local state) so they survive
+  // navigating to a detail/compare page and back via BackLink or browser back.
+  const updateParams = updates => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (!value) next.delete(key);
+        else next.set(key, value);
+      });
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!filterOpen) return undefined;
@@ -56,9 +61,17 @@ export default function HistoryListPage() {
     ? historyEntries.find(entry => entry.targetId === targetId)?.targetLabel
     : null;
 
-  const activeTypes = Object.keys(typeFilters).filter(
-    type => typeFilters[type],
-  );
+  const sortOrder = searchParams.get("sort") === "asc" ? "asc" : "desc";
+  const dateFrom = searchParams.get("from") ?? "";
+  const dateTo = searchParams.get("to") ?? "";
+  const activeTypes = (searchParams.get("types") ?? "")
+    .split(",")
+    .filter(type => TYPE_LABELS[type]);
+  const typeFilters = {
+    css: activeTypes.includes("css"),
+    html: activeTypes.includes("html"),
+    js: activeTypes.includes("js"),
+  };
 
   const entries = useMemo(() => {
     let list = filterEntriesByTarget(targetId);
@@ -94,16 +107,16 @@ export default function HistoryListPage() {
         ? `${dateFrom} 이후`
         : `${dateTo} 이전`;
   const typeFilterLabel = activeTypes.map(type => TYPE_LABELS[type]).join(", ");
-  const clearDateFilter = () => {
-    setDateFrom("");
-    setDateTo("");
+  const clearDateFilter = () => updateParams({ from: null, to: null });
+  const clearTypeFilter = () => updateParams({ types: null });
+  const toggleTypeFilter = type => {
+    const next = activeTypes.includes(type)
+      ? activeTypes.filter(t => t !== type)
+      : [...activeTypes, type];
+    updateParams({ types: next.join(",") || null });
   };
-  const clearTypeFilter = () =>
-    setTypeFilters({ css: false, html: false, js: false });
-  const toggleTypeFilter = type =>
-    setTypeFilters(prev => ({ ...prev, [type]: !prev[type] }));
   const toggleSortOrder = () =>
-    setSortOrder(prev => (prev === "desc" ? "asc" : "desc"));
+    updateParams({ sort: sortOrder === "desc" ? "asc" : null });
 
   const selectedTargetId =
     selectedIds.length > 0
@@ -200,7 +213,7 @@ export default function HistoryListPage() {
                   className={styles.dateInput}
                   value={dateFrom}
                   max={dateTo || undefined}
-                  onChange={e => setDateFrom(e.target.value)}
+                  onChange={e => updateParams({ from: e.target.value })}
                   aria-label="시작 날짜"
                 />
                 <span className={styles.dateSep}>~</span>
@@ -209,7 +222,7 @@ export default function HistoryListPage() {
                   className={styles.dateInput}
                   value={dateTo}
                   min={dateFrom || undefined}
-                  onChange={e => setDateTo(e.target.value)}
+                  onChange={e => updateParams({ to: e.target.value })}
                   aria-label="종료 날짜"
                 />
               </div>
@@ -232,14 +245,15 @@ export default function HistoryListPage() {
           {activeTargetLabel && (
             <span className={styles.filterChip}>
               {activeTargetLabel}
-              <Link
-                to="/"
+              <button
+                type="button"
                 className={styles.filterClear}
+                onClick={() => updateParams({ target: null })}
                 aria-label="타겟 필터 해제"
                 title="타겟 필터 해제"
               >
                 <Icon name="close" size={9} />
-              </Link>
+              </button>
             </span>
           )}
           {hasDateFilter && (
