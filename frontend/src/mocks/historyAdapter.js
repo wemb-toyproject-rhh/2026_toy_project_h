@@ -126,7 +126,6 @@ function buildPageEntries() {
         targetLabel: `[Page] ${row.name}`,
         targetName: row.name,
         title: row.comment || `${row.name} 저장`,
-        author: row.last_user ?? null,
         version: row.version ?? null,
         savedAt: formatDate(row.reg_dt),
         savedAtRaw: row.reg_dt,
@@ -197,7 +196,6 @@ function buildInstanceEntries() {
         targetLabel: `[${is3D ? "3D" : "2D"}] ${row.comp_name}`,
         targetName: row.comp_name,
         title: row.comment || `${row.comp_name} 저장`,
-        author: null, // tb_instance_hist has no last_user column
         version: null, // tb_instance_hist has no version column
         savedAt: formatDate(row.reg_dt),
         savedAtRaw: row.reg_dt,

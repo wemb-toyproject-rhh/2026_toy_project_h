@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { filterEntriesByTarget, getEntryById, getTabContent } from "../mocks/historyAdapter.js";
 import { computeDiff } from "../utils/diff.js";
+import Badge from "../components/common/Badge.jsx";
 import BackLink from "../components/common/BackLink.jsx";
 import ScrollToTopButton from "../components/common/ScrollToTopButton.jsx";
 import DiffStatBadge from "../components/common/DiffStatBadge.jsx";
@@ -19,35 +20,44 @@ export default function CompareHistoryPage() {
   const { state } = useLocation();
   const [idA, setIdA] = useState(state?.ids?.[0] ?? DEFAULT_IDS[0]);
   const [idB, setIdB] = useState(state?.ids?.[1] ?? DEFAULT_IDS[1]);
-  const versionA = getEntryById(idA) ?? getEntryById(DEFAULT_IDS[0]);
-  const versionB = getEntryById(idB) ?? getEntryById(DEFAULT_IDS[1]);
+  const entryA = getEntryById(idA) ?? getEntryById(DEFAULT_IDS[0]);
+  const entryB = getEntryById(idB) ?? getEntryById(DEFAULT_IDS[1]);
+
+  // The right pane always shows the more recently saved entry, so the diff
+  // (deletions on the left, additions on the right) reads chronologically
+  // left-to-right regardless of the order the two entries were selected in.
+  const isAOlder = new Date(entryA.savedAtRaw) <= new Date(entryB.savedAtRaw);
+  const olderVersion = isAOlder ? entryA : entryB;
+  const newerVersion = isAOlder ? entryB : entryA;
+  const setOlderId = isAOlder ? setIdA : setIdB;
+  const setNewerId = isAOlder ? setIdB : setIdA;
 
   // A version can only be swapped for another history entry of the same
   // page/component, and never for whatever the other side is already
   // showing — comparing an entry against itself isn't a useful diff.
-  const optionsA = filterEntriesByTarget(versionA.targetId).filter(
-    (entry) => entry.id !== versionA.id && entry.id !== versionB.id,
+  const olderOptions = filterEntriesByTarget(olderVersion.targetId).filter(
+    (entry) => entry.id !== olderVersion.id && entry.id !== newerVersion.id,
   );
-  const optionsB = filterEntriesByTarget(versionB.targetId).filter(
-    (entry) => entry.id !== versionB.id && entry.id !== versionA.id,
+  const newerOptions = filterEntriesByTarget(newerVersion.targetId).filter(
+    (entry) => entry.id !== newerVersion.id && entry.id !== olderVersion.id,
   );
 
   const [activePrimaryId, setActivePrimaryId] = useState(
-    versionA.primaryTabs.find((tab) => tab.hasSubTabs)?.id ?? versionA.primaryTabs[0]?.id,
+    olderVersion.primaryTabs.find((tab) => tab.hasSubTabs)?.id ?? olderVersion.primaryTabs[0]?.id,
   );
   const [activeSubId, setActiveSubId] = useState(
-    versionA.lifecycles.find((lc) => lc.modified)?.id ?? versionA.lifecycles[0]?.id,
+    olderVersion.lifecycles.find((lc) => lc.modified)?.id ?? olderVersion.lifecycles[0]?.id,
   );
 
-  const codeA = useMemo(
-    () => getTabContent(versionA, activePrimaryId, activeSubId),
-    [versionA, activePrimaryId, activeSubId],
+  const codeOld = useMemo(
+    () => getTabContent(olderVersion, activePrimaryId, activeSubId),
+    [olderVersion, activePrimaryId, activeSubId],
   );
-  const codeB = useMemo(
-    () => getTabContent(versionB, activePrimaryId, activeSubId),
-    [versionB, activePrimaryId, activeSubId],
+  const codeNew = useMemo(
+    () => getTabContent(newerVersion, activePrimaryId, activeSubId),
+    [newerVersion, activePrimaryId, activeSubId],
   );
-  const { left, right } = useMemo(() => computeDiff(codeA, codeB), [codeA, codeB]);
+  const { left, right } = useMemo(() => computeDiff(codeOld, codeNew), [codeOld, codeNew]);
 
   const diffStats = useMemo(
     () => ({
@@ -61,9 +71,13 @@ export default function CompareHistoryPage() {
     <div className={styles.page}>
       <BackLink />
 
+      <div className={styles.header}>
+        <Badge tone="accent">{olderVersion.targetLabel}</Badge>
+      </div>
+
       <SubTabGroup
-        primaryTabs={versionA.primaryTabs}
-        lifecycles={versionA.lifecycles}
+        primaryTabs={olderVersion.primaryTabs}
+        lifecycles={olderVersion.lifecycles}
         activePrimaryId={activePrimaryId}
         activeSubId={activeSubId}
         onPrimaryChange={setActivePrimaryId}
@@ -76,20 +90,22 @@ export default function CompareHistoryPage() {
 
       <SideBySideDiff
         left={{
-          label: `버전 A · ${versionA.targetLabel}`,
-          meta: formatVersionMeta(versionA),
+          kind: "이전 버전",
+          label: olderVersion.title,
+          meta: formatVersionMeta(olderVersion),
           lines: left,
-          code: codeA,
-          options: optionsA,
-          onSelect: setIdA,
+          code: codeOld,
+          options: olderOptions,
+          onSelect: setOlderId,
         }}
         right={{
-          label: `버전 B · ${versionB.targetLabel}`,
-          meta: formatVersionMeta(versionB),
+          kind: "최신 버전",
+          label: newerVersion.title,
+          meta: formatVersionMeta(newerVersion),
           lines: right,
-          code: codeB,
-          options: optionsB,
-          onSelect: setIdB,
+          code: codeNew,
+          options: newerOptions,
+          onSelect: setNewerId,
         }}
       />
 

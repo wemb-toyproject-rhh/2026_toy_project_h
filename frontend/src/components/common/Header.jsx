@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import ProjectSwitcher from "./ProjectSwitcher.jsx";
 import styles from "./Header.module.css";
 
 export default function Header() {
@@ -17,7 +18,13 @@ export default function Header() {
         </Link>
       </div>
       <div className={styles.metaCol}>
-        <span className={styles.project}>프로젝트: 스마트 관제 (main)</span>
+        <ProjectSwitcher />
+      </div>
+      <div className={styles.actionCol}>
+        <span className={styles.user}>kim.dev</span>
+        <Link to="/login" className={styles.logout}>
+          로그아웃
+        </Link>
       </div>
     </header>
   );

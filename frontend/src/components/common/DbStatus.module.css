@@ -1,0 +1,48 @@
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ok {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+.refreshBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.refreshBtn:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.refreshBtn span {
+  display: inline-block;
+  transition: transform 0.4s ease;
+}
+
+.refreshBtn:hover span {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refreshBtn span {
+    transition: none;
+  }
+}

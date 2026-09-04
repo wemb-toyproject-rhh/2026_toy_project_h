@@ -8,6 +8,11 @@
   text-decoration: none;
   width: fit-content;
   flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .link:hover {
