@@ -25,6 +25,11 @@
 
 .card.disabled {
   cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.card.disabled:hover {
+  background: var(--color-surface);
 }
 
 .checkbox {

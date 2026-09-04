@@ -105,10 +105,20 @@ export default function HistoryListPage() {
   const toggleSortOrder = () =>
     setSortOrder(prev => (prev === "desc" ? "asc" : "desc"));
 
+  const selectedTargetId =
+    selectedIds.length > 0
+      ? historyEntries.find(entry => entry.id === selectedIds[0])?.targetId
+      : null;
+
   const toggleSelect = id => {
     setSelectedIds(prev => {
       if (prev.includes(id)) return prev.filter(existing => existing !== id);
       if (prev.length >= 2) return prev;
+      if (prev.length === 1) {
+        const firstTargetId = historyEntries.find(entry => entry.id === prev[0])?.targetId;
+        const nextTargetId = historyEntries.find(entry => entry.id === id)?.targetId;
+        if (firstTargetId !== nextTargetId) return prev;
+      }
       return [...prev, id];
     });
   };
@@ -315,7 +325,10 @@ export default function HistoryListPage() {
               key={item.id}
               item={item}
               selected={selectedIds.includes(item.id)}
-              selectionDisabled={selectedIds.length >= 2}
+              selectionDisabled={
+                selectedIds.length >= 2 ||
+                (selectedIds.length === 1 && item.targetId !== selectedTargetId)
+              }
               onToggleSelect={toggleSelect}
               onRenameTitle={handleRenameTitle}
             />
