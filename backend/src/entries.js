@@ -96,7 +96,9 @@ function buildPageEntry(row, prev) {
     targetId: row.page_id,
     targetLabel: `[Page] ${row.name}`,
     targetName: row.name,
-    title: row.comment || `${row.name} 저장`,
+    // title 컬럼이 비어있는 기존 행은 예전처럼 비고로 대체 표시합니다.
+    title: row.title || row.comment || `${row.name} 저장`,
+    hidden: row.hidden ?? false,
     author: row.author || null,
     version: row.version || null,
     savedAt: toIsoish(row.saved_at),
@@ -150,7 +152,9 @@ function buildInstanceEntry(row, prev) {
     pageTargetId: row.page_id ?? null,
     targetLabel: `[${is3D ? "3D" : "2D"}] ${row.comp_name}`,
     targetName: row.comp_name,
-    title: row.comment || `${row.comp_name} 저장`,
+    // title 컬럼이 비어있는 기존 행은 예전처럼 비고로 대체 표시합니다.
+    title: row.title || row.comment || `${row.comp_name} 저장`,
+    hidden: row.hidden ?? false,
     author: null, // tb_instance_hist 에는 작성자 컬럼이 없음
     version: null, // tb_instance_hist 에는 버전 컬럼이 없음
     savedAt: toIsoish(row.saved_at),
@@ -173,7 +177,8 @@ async function fetchPageRows() {
     SELECT p.hist_id, p.page_id, p.name, p.version,
            COALESCE(u.name, p.last_user) AS author,
            to_char(p.update_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at,
-           p.comment, p.css_code, p.lc_before_load, p.lc_loaded, p.lc_before_unload
+           p.comment, p.title, p.hidden,
+           p.css_code, p.lc_before_load, p.lc_loaded, p.lc_before_unload
     FROM tb_page_hist p
     LEFT JOIN tb_user u ON u.user_id = p.last_user
     ORDER BY p.page_id, p.hist_id ASC
@@ -185,7 +190,7 @@ async function fetchInstanceRows() {
   const { rows } = await query(`
     SELECT hist_id, inst_id, page_id, name, category, comp_name,
            to_char(reg_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at,
-           comment, css_code, html_code,
+           comment, title, hidden, css_code, html_code,
            lc_register, lc_completed, lc_before_destroy, lc_destroy, lc_preview
     FROM tb_instance_hist
     ORDER BY inst_id, hist_id ASC
