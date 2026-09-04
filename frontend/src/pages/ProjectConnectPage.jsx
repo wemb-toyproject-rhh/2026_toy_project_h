@@ -62,9 +62,14 @@ export default function ProjectConnectPage() {
           </label>
         </div>
 
-        <Button type="submit" variant="primary" className={styles.submit}>
-          프로젝트 연결
-        </Button>
+        <div className={styles.actions}>
+          <Button type="button" variant="default" onClick={() => navigate(-1)}>
+            취소
+          </Button>
+          <Button type="submit" variant="primary" className={styles.submit}>
+            프로젝트 연결
+          </Button>
+        </div>
       </form>
     </div>
   );

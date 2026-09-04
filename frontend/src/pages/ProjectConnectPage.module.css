@@ -87,7 +87,12 @@
   outline-offset: 1px;
 }
 
-.submit {
+.actions {
+  display: flex;
+  gap: 8px;
   margin-top: 6px;
-  width: 100%;
+}
+
+.submit {
+  flex: 1;
 }
