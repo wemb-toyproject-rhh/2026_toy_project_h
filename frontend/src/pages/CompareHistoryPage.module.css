@@ -8,3 +8,27 @@
   padding-bottom: 14px;
   border-bottom: 1px solid var(--color-border);
 }
+
+.stateMessage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.stateRetry {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.stateRetry:hover {
+  background: rgba(var(--color-accent-rgb), 0.18);
+}

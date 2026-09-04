@@ -7,7 +7,7 @@ export default function LoginPage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    navigate("/");
+    navigate("/connect");
   };
 
   return (

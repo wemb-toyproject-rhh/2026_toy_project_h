@@ -93,14 +93,6 @@
   padding: 0 20px;
 }
 
-.project {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .actionCol {
   flex-shrink: 0;
   display: flex;

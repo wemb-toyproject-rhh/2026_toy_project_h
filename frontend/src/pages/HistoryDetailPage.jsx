@@ -1,11 +1,7 @@
-import { useMemo, useReducer, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import {
-  getEntryById,
-  getPrevTabContent,
-  getTabContent,
-  updateEntryTitle,
-} from "../mocks/historyAdapter.js";
+import { getEntryById, getPrevTabContent, getTabContent } from "../services/historyAdapter.js";
+import { useHistory } from "../context/HistoryContext.jsx";
 import { computeDiff } from "../utils/diff.js";
 import Badge from "../components/common/Badge.jsx";
 import BackLink from "../components/common/BackLink.jsx";
@@ -20,17 +16,22 @@ import styles from "./HistoryDetailPage.module.css";
 
 export default function HistoryDetailPage() {
   const { id } = useParams();
-  const entry = getEntryById(id) ?? getEntryById("page-29");
-  const [, forceRerender] = useReducer((n) => n + 1, 0);
+  const { entries, loading, error, reload, updateTitle } = useHistory();
+  const entry = getEntryById(entries, id);
 
-  const [activePrimaryId, setActivePrimaryId] = useState(
-    entry.primaryTabs.find((tab) => tab.hasSubTabs)?.id ?? entry.primaryTabs[0]?.id,
-  );
-  const [activeSubId, setActiveSubId] = useState(
-    entry.lifecycles.find((lc) => lc.modified)?.id ?? entry.lifecycles[0]?.id,
-  );
+  const [activePrimaryId, setActivePrimaryId] = useState(null);
+  const [activeSubId, setActiveSubId] = useState(null);
+
+  // entry arrives asynchronously (fetched from the API), so the default tab
+  // is picked once here rather than as a useState initializer.
+  useEffect(() => {
+    if (!entry || activePrimaryId) return;
+    setActivePrimaryId(entry.primaryTabs.find((tab) => tab.hasSubTabs)?.id ?? entry.primaryTabs[0]?.id);
+    setActiveSubId(entry.lifecycles.find((lc) => lc.modified)?.id ?? entry.lifecycles[0]?.id);
+  }, [entry, activePrimaryId]);
 
   const diffLines = useMemo(() => {
+    if (!entry || !activePrimaryId) return [];
     const current = getTabContent(entry, activePrimaryId, activeSubId);
     const prev = getPrevTabContent(entry, activePrimaryId, activeSubId);
     return computeDiff(prev, current).unified;
@@ -45,6 +46,38 @@ export default function HistoryDetailPage() {
     });
     return { additions, deletions };
   }, [diffLines]);
+
+  if (loading && !entry) {
+    return (
+      <div className={styles.page}>
+        <BackLink />
+        <p className={styles.stateMessage}>이력을 불러오는 중...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.page}>
+        <BackLink />
+        <div className={styles.stateMessage}>
+          <span>{error}</span>
+          <button type="button" className={styles.stateRetry} onClick={reload}>
+            다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!entry) {
+    return (
+      <div className={styles.page}>
+        <BackLink />
+        <p className={styles.stateMessage}>이력을 찾을 수 없습니다.</p>
+      </div>
+    );
+  }
 
   const note = {
     summary: entry.comment || "작성된 설명이 없습니다.",
@@ -66,10 +99,7 @@ export default function HistoryDetailPage() {
           <EditableTitle
             value={entry.title}
             className={styles.title}
-            onSave={(newTitle) => {
-              updateEntryTitle(entry.id, newTitle);
-              forceRerender();
-            }}
+            onSave={(newTitle) => updateTitle(entry.id, newTitle)}
           />
         </div>
         <div className={styles.headerRight}>
