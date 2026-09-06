@@ -17,12 +17,17 @@ export function ProjectProvider({ children }) {
     return id;
   };
 
+  const removeProject = (id) => {
+    setProjects((prev) => prev.filter((project) => project.id !== id));
+    setCurrentProjectId((prevId) => (prevId === id ? null : prevId));
+  };
+
   const currentProject =
     projects.find((project) => project.id === currentProjectId) ?? projects[0];
 
   return (
     <ProjectContext.Provider
-      value={{ projects, currentProject, setCurrentProjectId, addProject }}
+      value={{ projects, currentProject, setCurrentProjectId, addProject, removeProject }}
     >
       {children}
     </ProjectContext.Provider>
