@@ -58,6 +58,7 @@ export default function HistoryListPage() {
     : null;
 
   const sortOrder = searchParams.get("sort") === "asc" ? "asc" : "desc";
+  const searchQuery = searchParams.get("q") ?? "";
   const dateFrom = searchParams.get("from") ?? "";
   const dateTo = searchParams.get("to") ?? "";
   const activeTypes = (searchParams.get("types") ?? "")
@@ -71,6 +72,15 @@ export default function HistoryListPage() {
 
   const entries = useMemo(() => {
     let list = filterEntriesByTarget(allEntries, targetId);
+
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      list = list.filter(entry =>
+        [entry.title, entry.targetName, entry.author]
+          .filter(Boolean)
+          .some(field => field.toLowerCase().includes(query)),
+      );
+    }
 
     if (dateFrom) {
       const from = new Date(dateFrom);
@@ -92,7 +102,7 @@ export default function HistoryListPage() {
       const diff = new Date(a.savedAtRaw) - new Date(b.savedAtRaw);
       return sortOrder === "asc" ? diff : -diff;
     });
-  }, [allEntries, targetId, dateFrom, dateTo, sortOrder, activeTypes]);
+  }, [allEntries, targetId, searchQuery, dateFrom, dateTo, sortOrder, activeTypes]);
 
   const hasDateFilter = Boolean(dateFrom || dateTo);
   const hasTypeFilter = activeTypes.length > 0;
@@ -158,6 +168,8 @@ export default function HistoryListPage() {
           type="text"
           className={styles.searchInput}
           placeholder="컴포넌트명, 제목, 작성자로 검색..."
+          value={searchQuery}
+          onChange={e => updateParams({ q: e.target.value })}
         />
 
         {filterOpen && (
