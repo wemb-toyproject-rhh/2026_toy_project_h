@@ -1,19 +1,46 @@
 .sidebar {
   width: var(--sidebar-width);
   flex-shrink: 0;
+  min-height: 0;
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   padding: 20px 16px 20px 8px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  overflow-y: auto;
 }
 
 .list {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.treeControls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  padding: 0 10px;
+}
+
+.treeControlBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.treeControlBtn:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
 }
 
 .pageGroup {
@@ -153,7 +180,8 @@
 }
 
 .footer {
-  margin-top: auto;
+  flex-shrink: 0;
+  margin-top: 14px;
   border-top: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;

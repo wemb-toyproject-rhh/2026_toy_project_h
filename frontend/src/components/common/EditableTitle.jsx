@@ -71,7 +71,9 @@ export default function EditableTitle({ value, onSave, className = "" }) {
 
   return (
     <span className={styles.viewWrap}>
-      <span className={`${styles.text} ${className}`}>{value}</span>
+      <span className={`${styles.text} ${className}`} title={value}>
+        {value}
+      </span>
       <button
         type="button"
         className={styles.editBtn}

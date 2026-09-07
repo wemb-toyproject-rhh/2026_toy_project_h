@@ -55,12 +55,28 @@
   box-shadow: var(--shadow-md);
 }
 
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.optionRow:hover {
+  background: var(--color-surface-sunken);
+}
+
+.optionRow.active {
+  background: var(--color-accent-soft);
+}
+
 .option {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 7px 10px;
   border: none;
   border-radius: var(--radius-sm);
@@ -69,12 +85,23 @@
   cursor: pointer;
 }
 
-.option:hover {
-  background: var(--color-surface-sunken);
+.disconnectBtn {
+  flex-shrink: 0;
+  padding: 5px 8px;
+  margin-right: 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-.option.active {
-  background: var(--color-accent-soft);
+.disconnectBtn:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .optionName {
