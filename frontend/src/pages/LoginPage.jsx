@@ -22,8 +22,8 @@ export default function LoginPage() {
     setError("");
     setSubmitting(true);
     try {
-      const { token, userId: loggedInUserId, projectRecent } = await login(userId, password);
-      setAuth(token, loggedInUserId, projectRecent);
+      const { token, userId: loggedInUserId, projectRecent, userName } = await login(userId, password);
+      setAuth(token, loggedInUserId, projectRecent, userName);
 
       // 등록된 프로젝트가 있으면 바로 이력 화면으로, 없으면 프로젝트 연결 화면으로 보냅니다.
       try {

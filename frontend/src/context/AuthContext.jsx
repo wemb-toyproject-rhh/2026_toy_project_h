@@ -18,8 +18,8 @@ function readStoredAuth() {
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(readStoredAuth);
 
-  const login = useCallback((token, userId, projectRecent = null) => {
-    const next = { token, userId, projectRecent };
+  const login = useCallback((token, userId, projectRecent = null, userName = null) => {
+    const next = { token, userId, projectRecent, userName };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setAuth(next);
   }, []);
@@ -40,15 +40,28 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
+  // 닉네임 변경 성공 직후 세션에도 바로 반영합니다(재로그인 없이 헤더/설정
+  // 화면에 새 닉네임이 즉시 보이게 하기 위해서입니다).
+  const setUserName = useCallback((userName) => {
+    setAuth((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, userName };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
         token: auth?.token ?? null,
         userId: auth?.userId ?? null,
+        userName: auth?.userName ?? null,
         projectRecent: auth?.projectRecent ?? null,
         login,
         logout,
         setProjectRecent,
+        setUserName,
       }}
     >
       {children}
