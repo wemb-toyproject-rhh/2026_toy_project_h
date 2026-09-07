@@ -76,7 +76,7 @@ function buildChangedPaths(primaryTabs, lifecycles) {
 // prev: 같은 타겟의 바로 이전 이력(이번 저장 직전 상태). 항상 "최신"이 아니라
 // "그 시점에 뭐가 바뀌었는지"를 보여주기 위해, 타겟별로 hist_id 오름차순 정렬 후
 // 바로 앞 행을 prev 로 씁니다.
-function buildPageEntry(row, prev) {
+function buildPageEntry(row, prev, seq) {
   const lifecycles = buildLifecycles(row, prev, PAGE_LIFECYCLES);
   const cssCode = row.css_code ?? "";
   const prevCssCode = prev?.css_code ?? "";
@@ -96,8 +96,9 @@ function buildPageEntry(row, prev) {
     targetId: row.page_id,
     targetLabel: `[Page] ${row.name}`,
     targetName: row.name,
-    // title 컬럼이 비어있는 기존 행은 예전처럼 비고로 대체 표시합니다.
-    title: row.title || row.comment || `${row.name} 저장`,
+    // seq 는 같은 타겟(page_id) 안에서 과거순으로 매긴 번호입니다(1부터 시작).
+    // title 이 있으면 "#번호 제목", 없으면 "#번호"만 표시합니다.
+    title: row.title ? `#${seq} ${row.title}` : `#${seq}`,
     hidden: row.hidden ?? false,
     author: row.author || null,
     version: row.version || null,
@@ -116,7 +117,7 @@ function buildPageEntry(row, prev) {
   };
 }
 
-function buildInstanceEntry(row, prev) {
+function buildInstanceEntry(row, prev, seq) {
   const is3D = row.category === "3D";
   const defs = is3D ? THREE_D_LIFECYCLES : TWO_D_LIFECYCLES;
   const lifecycles = buildLifecycles(row, prev, defs);
@@ -150,11 +151,15 @@ function buildInstanceEntry(row, prev) {
     kind: row.category,
     targetId: row.inst_id,
     pageTargetId: row.page_id ?? null,
+    // 이 페이지 자체의 이력(tb_page_hist)이 없을 때, 프론트가 사이드바 트리에
+    // 페이지 노드를 만들 때 쓸 이름입니다 (tb_page 조인 결과, 없으면 null).
+    pageTargetName: row.page_name ?? null,
     // comp_name 이 아니라 name 이 화면에 표시할 인스턴스 이름입니다 (comp_name 은 다른 값).
     targetLabel: `[${is3D ? "3D" : "2D"}] ${row.name}`,
     targetName: row.name,
-    // title 컬럼이 비어있는 기존 행은 예전처럼 비고로 대체 표시합니다.
-    title: row.title || row.comment || `${row.name} 저장`,
+    // seq 는 같은 타겟(inst_id) 안에서 과거순으로 매긴 번호입니다(1부터 시작).
+    // title 이 있으면 "#번호 제목", 없으면 "#번호"만 표시합니다.
+    title: row.title ? `#${seq} ${row.title}` : `#${seq}`,
     hidden: row.hidden ?? false,
     author: null, // tb_instance_hist 에는 작성자 컬럼이 없음
     version: null, // tb_instance_hist 에는 버전 컬럼이 없음
@@ -189,11 +194,19 @@ async function fetchPageRows() {
   return rows;
 }
 
+// tb_page(현재 상태 테이블)를 조인해서 page_name 을 같이 내려줍니다 — 어떤 페이지가
+// 한 번도 직접 저장된 적 없고(=tb_page_hist에 행이 없고) 그 안의 컴포넌트만 저장된
+// 이력이 있으면, targetTree 를 만들 때 그 페이지 이름을 알 방법이 없기 때문입니다.
+// (ih.* 로 명시적으로 별칭을 줘서, tb_page 의 name 컬럼이 인스턴스 자신의 name 을
+// 덮어쓰지 않도록 합니다 — 두 테이블 다 name 컬럼이 있어서 실수하기 쉬운 지점입니다.)
 async function fetchInstanceRows() {
   const { rows } = await query(`
-    SELECT *, to_char(reg_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at
-    FROM tb_instance_hist
-    ORDER BY inst_id, hist_id ASC
+    SELECT ih.*,
+           pg.name AS page_name,
+           to_char(ih.reg_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at
+    FROM tb_instance_hist ih
+    LEFT JOIN tb_page pg ON pg.page_id = ih.page_id
+    ORDER BY ih.inst_id, ih.hist_id ASC
   `);
   return rows;
 }
@@ -206,10 +219,14 @@ export async function getAllEntries({ includeHidden = false } = {}) {
 
   const entries = [];
   for (const rows of groupByTarget(pageRows, "page_id").values()) {
-    rows.forEach((row, index) => entries.push(buildPageEntry(row, rows[index - 1] ?? null)));
+    rows.forEach((row, index) =>
+      entries.push(buildPageEntry(row, rows[index - 1] ?? null, index + 1)),
+    );
   }
   for (const rows of groupByTarget(instanceRows, "inst_id").values()) {
-    rows.forEach((row, index) => entries.push(buildInstanceEntry(row, rows[index - 1] ?? null)));
+    rows.forEach((row, index) =>
+      entries.push(buildInstanceEntry(row, rows[index - 1] ?? null, index + 1)),
+    );
   }
 
   entries.sort((a, b) => new Date(b.savedAtRaw) - new Date(a.savedAtRaw));
