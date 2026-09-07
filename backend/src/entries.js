@@ -76,7 +76,7 @@ function buildChangedPaths(primaryTabs, lifecycles) {
 // prev: 같은 타겟의 바로 이전 이력(이번 저장 직전 상태). 항상 "최신"이 아니라
 // "그 시점에 뭐가 바뀌었는지"를 보여주기 위해, 타겟별로 hist_id 오름차순 정렬 후
 // 바로 앞 행을 prev 로 씁니다.
-function buildPageEntry(row, prev) {
+function buildPageEntry(row, prev, seq) {
   const lifecycles = buildLifecycles(row, prev, PAGE_LIFECYCLES);
   const cssCode = row.css_code ?? "";
   const prevCssCode = prev?.css_code ?? "";
@@ -96,8 +96,9 @@ function buildPageEntry(row, prev) {
     targetId: row.page_id,
     targetLabel: `[Page] ${row.name}`,
     targetName: row.name,
-    // title 컬럼이 비어있는 기존 행은 예전처럼 비고로 대체 표시합니다.
-    title: row.title || row.comment || `${row.name} 저장`,
+    // seq 는 같은 타겟(page_id) 안에서 과거순으로 매긴 번호입니다(1부터 시작).
+    // title 이 있으면 "#번호 제목", 없으면 "#번호"만 표시합니다.
+    title: row.title ? `#${seq} ${row.title}` : `#${seq}`,
     hidden: row.hidden ?? false,
     author: row.author || null,
     version: row.version || null,
@@ -116,7 +117,7 @@ function buildPageEntry(row, prev) {
   };
 }
 
-function buildInstanceEntry(row, prev) {
+function buildInstanceEntry(row, prev, seq) {
   const is3D = row.category === "3D";
   const defs = is3D ? THREE_D_LIFECYCLES : TWO_D_LIFECYCLES;
   const lifecycles = buildLifecycles(row, prev, defs);
@@ -153,8 +154,9 @@ function buildInstanceEntry(row, prev) {
     // comp_name 이 아니라 name 이 화면에 표시할 인스턴스 이름입니다 (comp_name 은 다른 값).
     targetLabel: `[${is3D ? "3D" : "2D"}] ${row.name}`,
     targetName: row.name,
-    // title 컬럼이 비어있는 기존 행은 예전처럼 비고로 대체 표시합니다.
-    title: row.title || row.comment || `${row.name} 저장`,
+    // seq 는 같은 타겟(inst_id) 안에서 과거순으로 매긴 번호입니다(1부터 시작).
+    // title 이 있으면 "#번호 제목", 없으면 "#번호"만 표시합니다.
+    title: row.title ? `#${seq} ${row.title}` : `#${seq}`,
     hidden: row.hidden ?? false,
     author: null, // tb_instance_hist 에는 작성자 컬럼이 없음
     version: null, // tb_instance_hist 에는 버전 컬럼이 없음
@@ -206,10 +208,14 @@ export async function getAllEntries({ includeHidden = false } = {}) {
 
   const entries = [];
   for (const rows of groupByTarget(pageRows, "page_id").values()) {
-    rows.forEach((row, index) => entries.push(buildPageEntry(row, rows[index - 1] ?? null)));
+    rows.forEach((row, index) =>
+      entries.push(buildPageEntry(row, rows[index - 1] ?? null, index + 1)),
+    );
   }
   for (const rows of groupByTarget(instanceRows, "inst_id").values()) {
-    rows.forEach((row, index) => entries.push(buildInstanceEntry(row, rows[index - 1] ?? null)));
+    rows.forEach((row, index) =>
+      entries.push(buildInstanceEntry(row, rows[index - 1] ?? null, index + 1)),
+    );
   }
 
   entries.sort((a, b) => new Date(b.savedAtRaw) - new Date(a.savedAtRaw));
