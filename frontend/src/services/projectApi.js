@@ -40,13 +40,13 @@ export async function createProject(token, fields) {
   return res.json();
 }
 
-export async function updateProject(token, projectId, fields) {
-  const res = await fetch(`${BASE}/${projectId}`, {
+export async function renameProject(token, projectId, projectName) {
+  const res = await fetch(`${BASE}/${projectId}/name`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },
-    body: JSON.stringify(fields),
+    body: JSON.stringify({ projectName }),
   });
-  if (!res.ok) throw await parseErrorResponse(res, "프로젝트 수정에 실패했습니다");
+  if (!res.ok) throw await parseErrorResponse(res, "프로젝트 이름 수정에 실패했습니다");
   return res.json();
 }
 

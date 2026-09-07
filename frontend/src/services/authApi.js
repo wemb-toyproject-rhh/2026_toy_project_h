@@ -21,3 +21,17 @@ export async function login(userId, password) {
   if (!res.ok) throw new Error(data.error || `로그인에 실패했습니다 (${res.status})`);
   return data; // { token, userId, projectRecent }
 }
+
+export async function changePassword(token, currentPassword, newPassword) {
+  const res = await fetch(`${BASE}/users/me/password`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `비밀번호 변경에 실패했습니다 (${res.status})`);
+  return data; // { ok: true }
+}

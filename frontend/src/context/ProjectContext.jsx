@@ -3,7 +3,7 @@ import { useAuth } from "./AuthContext.jsx";
 import {
   fetchProjects,
   createProject,
-  updateProject as updateProjectApi,
+  renameProject as renameProjectApi,
   deleteProject as deleteProjectApi,
   setRecentProject,
 } from "../services/projectApi.js";
@@ -96,9 +96,9 @@ export function ProjectProvider({ children }) {
     [token, rememberRecent],
   );
 
-  const updateProject = useCallback(
-    async (projectId, fields) => {
-      const dto = await updateProjectApi(token, projectId, fields);
+  const renameProject = useCallback(
+    async (projectId, projectName) => {
+      const dto = await renameProjectApi(token, projectId, projectName);
       const next = toProject(dto);
       setProjects((prev) => prev.map((project) => (project.id === projectId ? next : project)));
       return next;
@@ -125,7 +125,7 @@ export function ProjectProvider({ children }) {
         currentProject,
         selectProject,
         addProject,
-        updateProject,
+        renameProject,
         deleteProject,
         loading,
         error,
