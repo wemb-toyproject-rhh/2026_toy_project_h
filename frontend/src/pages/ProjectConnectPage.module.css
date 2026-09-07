@@ -63,6 +63,8 @@
 
 .gallery {
   width: 0;
+  min-height: 0;
+  max-height: min(560px, calc(100vh - 48px));
   flex-shrink: 0;
   overflow: hidden;
   transition: width 0.22s ease;

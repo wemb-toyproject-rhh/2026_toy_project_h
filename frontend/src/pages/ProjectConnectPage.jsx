@@ -141,14 +141,14 @@ export default function ProjectConnectPage() {
     navigate("/");
   };
 
-  const handleDelete = async (event, projectId) => {
+  const handleDelete = async (event, project) => {
     event.stopPropagation();
-    if (!window.confirm("이 프로젝트를 목록에서 삭제할까요?")) return;
-    setDeletingId(projectId);
+    if (!window.confirm(`"${project.name}" 연결을 끊으시겠어요?`)) return;
+    setDeletingId(project.id);
     try {
-      await deleteProject(projectId);
+      await deleteProject(project.id);
     } catch (err) {
-      setError(err.message || "프로젝트 삭제에 실패했습니다");
+      setError(err.message || "연결 끊기에 실패했습니다");
     } finally {
       setDeletingId(null);
     }
@@ -328,10 +328,10 @@ export default function ProjectConnectPage() {
                       variant="ghostDanger"
                       size="icon"
                       className={styles.tileDelete}
-                      aria-label="프로젝트 삭제"
-                      title="프로젝트 삭제"
+                      aria-label="연결 끊기"
+                      title="연결 끊기"
                       disabled={deletingId === project.id}
-                      onClick={(event) => handleDelete(event, project.id)}
+                      onClick={(event) => handleDelete(event, project)}
                     >
                       <Icon name="trash" size={12} />
                     </Button>
