@@ -91,6 +91,46 @@ const ICONS = {
       strokeLinejoin="round"
     />
   ),
+  expandAll: (
+    <>
+      <path
+        d="M3 6 8 2 13 6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 10 8 14 13 10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </>
+  ),
+  collapseAll: (
+    <>
+      <path
+        d="M3 2 8 6 13 2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 14 8 10 13 14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </>
+  ),
   copy: (
     <>
       <rect

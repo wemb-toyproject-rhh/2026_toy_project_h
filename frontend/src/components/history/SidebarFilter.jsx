@@ -29,6 +29,9 @@ export default function SidebarFilter() {
   }, [location.pathname, location.state, id, searchParams, entries]);
 
   const { all, pages } = buildTargetTree(entries);
+  const groupIdsWithChildren = pages
+    .filter(page => page.children.length > 0)
+    .map(page => page.id);
 
   const toggleCollapsed = pageId => {
     setCollapsedIds(prev => {
@@ -39,8 +42,28 @@ export default function SidebarFilter() {
     });
   };
 
+  const expandAll = () => setCollapsedIds(new Set());
+  const collapseAll = () => setCollapsedIds(new Set(groupIdsWithChildren));
+  const allCollapsed =
+    groupIdsWithChildren.length > 0 &&
+    groupIdsWithChildren.every(pageId => collapsedIds.has(pageId));
+
   return (
     <aside className={styles.sidebar}>
+      {groupIdsWithChildren.length > 0 && (
+        <div className={styles.treeControls}>
+          <button
+            type="button"
+            className={styles.treeControlBtn}
+            onClick={allCollapsed ? expandAll : collapseAll}
+            aria-label={allCollapsed ? "트리 전체 펼치기" : "트리 전체 접기"}
+            title={allCollapsed ? "전체 펼치기" : "전체 접기"}
+          >
+            <Icon name={allCollapsed ? "expandAll" : "collapseAll"} size={13} />
+          </button>
+        </div>
+      )}
+
       <div className={styles.list}>
         <div className={styles.pageRow}>
           <span className={styles.toggleSpacer} />
