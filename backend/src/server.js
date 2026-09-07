@@ -60,8 +60,6 @@ function parseId(id) {
 }
 
 // 이력 목록. 페이지/컴포넌트 필터링은 프론트가 entry.targetId 기준으로 처리합니다.
-// [전체 이력 보기 화면]이 처음 열릴 때 한 번 호출합니다. 이력 상세/Diff 화면은 이때
-// 받은 목록을 그대로 재사용해서 별도로 다시 호출하지 않습니다(아래 두 API 참고).
 app.get("/api/history", async (req, res) => {
   try {
     const entries = await getAllEntries();
@@ -73,9 +71,6 @@ app.get("/api/history", async (req, res) => {
 });
 
 // 버전 비교. "/api/history/:id" 보다 먼저 등록해야 "compare" 가 :id 로 잡히지 않습니다.
-// [Diff(버전 비교) 화면]용으로 만들어뒀지만, 그 화면은 실제로는 위 GET /api/history 로
-// 이미 받아온 목록에서 클라이언트가 두 항목을 골라 비교하는 방식이라 지금은 호출되지
-// 않는 API입니다(미사용).
 app.get("/api/history/compare", async (req, res) => {
   const { v1, v2 } = req.query;
   if (!v1 || !v2) {
@@ -94,8 +89,7 @@ app.get("/api/history/compare", async (req, res) => {
   }
 });
 
-// 이력 단건 조회. [이력 상세 화면]용으로 만들어뒀지만, 그 화면도 위 GET /api/history
-// 로 이미 받아온 목록에서 id로 찾아 쓰는 방식이라 지금은 호출되지 않는 API입니다(미사용).
+// 이력 단건 조회.
 app.get("/api/history/:id", async (req, res) => {
   try {
     const entry = await getEntryById(req.params.id);
@@ -170,8 +164,6 @@ app.put("/api/history/:id/metadata", async (req, res) => {
 });
 
 // RHH 사용자 등록. 아이디/비밀번호만 받습니다 (임시 계정 관리).
-// [회원가입 화면]에서 호출합니다. 성공하면 화면이 바로 아래 로그인 API도 이어서
-// 호출해서 자동 로그인시킵니다.
 app.post("/api/rhh/users", async (req, res) => {
   const { userId, password } = req.body ?? {};
 
@@ -205,7 +197,6 @@ app.post("/api/rhh/users", async (req, res) => {
 });
 
 // RHH 로그인. 성공하면 이후 요청에 쓸 토큰을 내려줍니다.
-// [로그인 화면]에서 호출합니다(회원가입 화면도 가입 직후 자동 로그인을 위해 호출).
 app.post("/api/rhh/login", async (req, res) => {
   const { userId, password } = req.body ?? {};
 
@@ -242,84 +233,8 @@ app.post("/api/rhh/login", async (req, res) => {
   }
 });
 
-// [계정정보 수정 화면] 비밀번호 변경. 현재 비밀번호를 확인한 뒤에만 바꿉니다
-// (로그인과 같은 방식으로 bcrypt 비교).
-app.put("/api/rhh/users/me/password", requireAuth, async (req, res) => {
-  const { currentPassword, newPassword } = req.body ?? {};
-
-  if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
-    return res.status(400).json({ error: "현재 비밀번호와 새 비밀번호를 입력해 주세요" });
-  }
-  if (newPassword.length < PASSWORD_MIN) {
-    return res.status(400).json({ error: `새 비밀번호는 최소 ${PASSWORD_MIN}자 이상이어야 합니다` });
-  }
-
-  try {
-    const result = await query(`SELECT password FROM tb_user_rhh WHERE user_id = $1`, [req.userId]);
-    const row = result.rows[0];
-    if (!row) {
-      return res.status(404).json({ error: "계정을 찾을 수 없습니다" });
-    }
-
-    const currentOk = await verifyPassword(currentPassword, row.password);
-    if (!currentOk) {
-      return res.status(401).json({ error: "현재 비밀번호가 올바르지 않습니다" });
-    }
-
-    const hashed = await hashPassword(newPassword);
-    await query(`UPDATE tb_user_rhh SET password = $1 WHERE user_id = $2`, [hashed, req.userId]);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("[PUT /api/rhh/users/me/password]", err.message);
-    res.status(500).json({ error: "비밀번호 변경 실패", detail: err.message });
-  }
-});
-
-// [계정정보 수정 화면] 회원 탈퇴. 실제로 지우지 않고 use=false 로만 바꿉니다 —
-// 프로젝트 삭제(DELETE /api/rhh/projects/:id)와 같은 소프트 삭제 방식입니다.
-// 탈퇴 확인 차원에서 비밀번호를 다시 받고, 갖고 있던 활성 프로젝트도 같이 정리합니다.
-//
-// 주의: requireAuth 는 JWT 서명/만료만 확인하고 매 요청마다 use 를 다시 조회하진
-// 않아서, 탈퇴 직후에도 이미 발급된 토큰은 만료 전까지(최대 7일) 다른 API 호출엔
-// 계속 쓰일 수 있습니다 — "계정 정지"(use=false)도 원래 같은 특성이라 이번에 새로
-// 생긴 문제는 아니지만, 신경 쓰인다면 나중에 requireAuth 에서도 use 를 같이 확인하도록
-// 바꿔야 합니다.
-app.delete("/api/rhh/users/me", requireAuth, async (req, res) => {
-  const { password } = req.body ?? {};
-
-  if (typeof password !== "string") {
-    return res.status(400).json({ error: "비밀번호를 입력해 주세요" });
-  }
-
-  try {
-    const result = await query(`SELECT password FROM tb_user_rhh WHERE user_id = $1 AND use = true`, [
-      req.userId,
-    ]);
-    const row = result.rows[0];
-    if (!row) {
-      return res.status(404).json({ error: "계정을 찾을 수 없습니다" });
-    }
-
-    const passwordOk = await verifyPassword(password, row.password);
-    if (!passwordOk) {
-      return res.status(401).json({ error: "비밀번호가 올바르지 않습니다" });
-    }
-
-    await query(`UPDATE tb_user_rhh SET use = false WHERE user_id = $1`, [req.userId]);
-    await query(`UPDATE tb_project_list SET use = false, updated_at = now() WHERE user_id = $1 AND use = true`, [
-      req.userId,
-    ]);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("[DELETE /api/rhh/users/me]", err.message);
-    res.status(500).json({ error: "회원 탈퇴 실패", detail: err.message });
-  }
-});
-
 // 최근 접속 프로젝트 저장. project_recent 는 FK 없이 값만 들고 있는 soft
 // reference라서, 실제로 내(req.userId) 프로젝트가 맞는지 여기서 직접 확인하고 저장합니다.
-// [프로젝트 연결 화면]에서 프로젝트 목록의 [접속] 버튼을 누를 때, 그리고 새 프로젝트를
-// 등록해서 바로 선택될 때도 같이 호출됩니다.
 app.put("/api/rhh/users/me/recent-project", requireAuth, async (req, res) => {
   const { projectId } = req.body ?? {};
 
@@ -346,9 +261,6 @@ app.put("/api/rhh/users/me/recent-project", requireAuth, async (req, res) => {
 
 // 내 프로젝트 목록. requireAuth 가 채워준 req.userId 기준으로만 조회합니다 —
 // 클라이언트가 어떤 user_id 를 보내든(애초에 안 받음) 무시하고 토큰 주인만 봅니다.
-// [프로젝트 연결 화면]의 "등록된 프로젝트 목록"에서 호출합니다. [로그인 화면]도
-// 로그인 직후 "프로젝트가 있으면 이력 화면, 없으면 연결 화면"을 판단하려고 한 번
-// 호출합니다.
 app.get("/api/rhh/projects", requireAuth, async (req, res) => {
   try {
     const result = await query(
@@ -386,7 +298,6 @@ app.post("/api/rhh/projects/test-connection", requireAuth, async (req, res) => {
 // 프로젝트 등록. user_id 는 요청 본문이 아니라 토큰에서만 가져옵니다.
 // 실제로 접속 가능한 정보인지 먼저 확인하고, 안 되면 등록 자체를 거부합니다 —
 // 잘못된 접속 정보가 목록에 들어가면 나중에 이력 조회가 매번 500으로 실패하기 때문입니다.
-// [프로젝트 연결 화면]에서 [연결 테스트] 통과 후 [프로젝트 연결] 버튼을 누르면 호출됩니다.
 app.post("/api/rhh/projects", requireAuth, async (req, res) => {
   const { projectName, host, port, dbName, account, password } = req.body ?? {};
 
@@ -423,9 +334,65 @@ app.post("/api/rhh/projects", requireAuth, async (req, res) => {
   }
 });
 
+// 프로젝트 수정. 넘긴 필드만 갱신하며(기존 /metadata 와 같은 방식), 반드시
+// "내(req.userId) 프로젝트"일 때만 수정됩니다 — 다른 사람 프로젝트는 조건절에서 안 걸립니다.
+app.put("/api/rhh/projects/:projectId", requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+  const { projectName, host, port, dbName, account, password } = req.body ?? {};
+
+  const assignments = [];
+  const values = [];
+  for (const [column, value] of [
+    ["project_name", projectName],
+    ["host", host],
+    ["db_name", dbName],
+    ["account", account],
+    ["password", password],
+  ]) {
+    if (value === undefined) continue;
+    if (typeof value !== "string" || !value.trim()) {
+      return res.status(400).json({ error: `${column} 은(는) 빈 값일 수 없습니다` });
+    }
+    if (value.length > PROJECT_FIELD_MAX) {
+      return res.status(400).json({ error: `${column} 은(는) ${PROJECT_FIELD_MAX}자를 넘을 수 없습니다` });
+    }
+    values.push(value);
+    assignments.push(`${column} = $${values.length}`);
+  }
+  if (port !== undefined) {
+    const portNum = Number(port);
+    if (!Number.isInteger(portNum) || portNum <= 0 || portNum > 65535) {
+      return res.status(400).json({ error: "port 는 1~65535 사이의 숫자여야 합니다" });
+    }
+    values.push(portNum);
+    assignments.push(`port = $${values.length}`);
+  }
+  if (assignments.length === 0) {
+    return res.status(400).json({ error: "수정할 값이 없습니다" });
+  }
+  assignments.push("updated_at = now()");
+
+  values.push(projectId, req.userId);
+
+  try {
+    const result = await query(
+      `UPDATE tb_project_list SET ${assignments.join(", ")}
+       WHERE project_id = $${values.length - 1} AND user_id = $${values.length} AND use = true
+       RETURNING *`,
+      values,
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "프로젝트를 찾을 수 없습니다" });
+    }
+    res.json(toProjectDto(result.rows[0]));
+  } catch (err) {
+    console.error("[PUT /api/rhh/projects/:projectId]", err.message);
+    res.status(500).json({ error: "프로젝트 수정 실패", detail: err.message });
+  }
+});
+
 // 프로젝트 삭제. 실제로 지우지 않고 use=false 로만 바꿉니다(요구사항).
 // 여기도 "내 프로젝트"일 때만 지워지도록 user_id 를 조건에 같이 겁니다.
-// [프로젝트 연결 화면]의 프로젝트별 삭제(휴지통 아이콘) 버튼에서 호출합니다.
 app.delete("/api/rhh/projects/:projectId", requireAuth, async (req, res) => {
   const { projectId } = req.params;
 
