@@ -393,3 +393,8 @@
   border-top: 1px solid var(--color-border);
   overflow-y: auto;
 }
+
+.scrollSentinel {
+  flex-shrink: 0;
+  height: 1px;
+}

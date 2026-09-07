@@ -2,22 +2,55 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useProjects } from "../context/ProjectContext.jsx";
-import { changePassword } from "../services/authApi.js";
+import { changeNickname, changePassword, deleteAccount } from "../services/authApi.js";
 import Button from "../components/common/Button.jsx";
 import BackLink from "../components/common/BackLink.jsx";
 import PasswordInput from "../components/common/PasswordInput.jsx";
 import styles from "./AccountSettingsPage.module.css";
 
 const PASSWORD_MIN = 4;
+const USER_NAME_MAX = 100;
 
 export default function AccountSettingsPage() {
   const navigate = useNavigate();
-  const { userId, token, logout } = useAuth();
+  const { userId, userName, token, logout, setUserName } = useAuth();
   const { projects } = useProjects();
+  const [nickname, setNickname] = useState(userName ?? "");
+  const [nicknameError, setNicknameError] = useState("");
+  const [nicknameSuccess, setNicknameSuccess] = useState(false);
+  const [nicknameSubmitting, setNicknameSubmitting] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: "", next: "", confirm: "" });
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
+  const handleNicknameSubmit = async (event) => {
+    event.preventDefault();
+    if (nicknameSubmitting) return;
+    setNicknameError("");
+    setNicknameSuccess(false);
+
+    const trimmed = nickname.trim();
+    if (trimmed.length > USER_NAME_MAX) {
+      setNicknameError(`닉네임은 ${USER_NAME_MAX}자를 넘을 수 없습니다`);
+      return;
+    }
+
+    setNicknameSubmitting(true);
+    try {
+      const { userName: saved } = await changeNickname(token, trimmed);
+      setUserName(saved);
+      setNickname(saved ?? "");
+      setNicknameSuccess(true);
+    } catch (err) {
+      setNicknameError(err.message || "닉네임 변경에 실패했습니다");
+    } finally {
+      setNicknameSubmitting(false);
+    }
+  };
 
   const handlePasswordField = (field) => (event) => {
     setPasswordSuccess(false);
@@ -61,6 +94,35 @@ export default function AccountSettingsPage() {
     navigate("/login");
   };
 
+  const handleDeleteAccount = async (event) => {
+    event.preventDefault();
+    if (deleteSubmitting) return;
+    setDeleteError("");
+
+    if (!deletePassword) {
+      setDeleteError("비밀번호를 입력해 주세요");
+      return;
+    }
+    if (
+      !window.confirm(
+        "정말 계정을 삭제하시겠어요? 연결된 프로젝트 정보도 함께 사라지며 되돌릴 수 없습니다.",
+      )
+    ) {
+      return;
+    }
+
+    setDeleteSubmitting(true);
+    try {
+      await deleteAccount(token, deletePassword);
+      logout();
+      navigate("/login");
+    } catch (err) {
+      setDeleteError(err.message || "계정 삭제에 실패했습니다");
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
   return (
     <div className={styles.page}>
       <BackLink>이전 페이지</BackLink>
@@ -68,18 +130,45 @@ export default function AccountSettingsPage() {
 
       <section className={styles.card}>
         <h2 className={styles.sectionTitle}>계정 정보</h2>
-        <div className={styles.infoGrid}>
-          <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>아이디</span>
-            <span className={styles.infoValue}>{userId ?? "-"}</span>
+        <div className={styles.infoBlock}>
+          <div className={styles.infoGrid}>
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>아이디</span>
+              <span className={styles.infoValue}>{userId ?? "-"}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>연결된 프로젝트</span>
+              <span className={styles.infoValue}>
+                {projects.length > 0 ? `${projects.length}개` : "없음"}
+              </span>
+            </div>
           </div>
-          <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>연결된 프로젝트</span>
-            <span className={styles.infoValue}>
-              {projects.length > 0 ? `${projects.length}개` : "없음"}
-            </span>
-          </div>
+
+          <form className={styles.nicknameForm} onSubmit={handleNicknameSubmit}>
+          <label className={styles.field}>
+            <span className={styles.label}>닉네임</span>
+            <div className={styles.nicknameRow}>
+              <input
+                type="text"
+                className={styles.input}
+                placeholder="닉네임을 입력하세요"
+                value={nickname}
+                onChange={(event) => {
+                  setNickname(event.target.value);
+                  setNicknameSuccess(false);
+                }}
+                maxLength={USER_NAME_MAX}
+              />
+              <Button type="submit" variant="default" size="sm" disabled={nicknameSubmitting}>
+                {nicknameSubmitting ? "저장 중..." : "저장"}
+              </Button>
+            </div>
+          </label>
+          {nicknameError && <p className={styles.error}>{nicknameError}</p>}
+          {nicknameSuccess && <p className={styles.success}>닉네임이 저장되었습니다</p>}
+          </form>
         </div>
+
         <div className={styles.actions}>
           <Button
             type="button"
@@ -141,18 +230,26 @@ export default function AccountSettingsPage() {
       </section>
 
       <section className={`${styles.card} ${styles.dangerCard}`}>
-        <div className={styles.dangerRow}>
-          <div>
-            <h2 className={styles.sectionTitle}>계정 삭제</h2>
-            <p className={styles.dangerText}>
-              계정을 삭제하면 연결된 프로젝트 정보가 모두 사라지며 되돌릴 수 없습니다.
-            </p>
-            <p className={styles.hint}>계정 삭제 API가 아직 준비되지 않았습니다</p>
-          </div>
-          <Button type="button" variant="danger" disabled title="백엔드 API 준비 중">
-            계정 삭제
+        <h2 className={styles.sectionTitle}>계정 삭제</h2>
+        <p className={styles.dangerText}>
+          계정을 삭제하면 연결된 프로젝트 정보가 모두 사라지며 되돌릴 수 없습니다.
+        </p>
+        <form className={styles.dangerForm} onSubmit={handleDeleteAccount}>
+          <PasswordInput
+            className={styles.input}
+            placeholder="비밀번호 확인"
+            value={deletePassword}
+            onChange={(event) => {
+              setDeletePassword(event.target.value);
+              setDeleteError("");
+            }}
+            autoComplete="current-password"
+          />
+          <Button type="submit" variant="danger" disabled={deleteSubmitting}>
+            {deleteSubmitting ? "삭제 중..." : "계정 삭제"}
           </Button>
-        </div>
+        </form>
+        {deleteError && <p className={styles.error}>{deleteError}</p>}
       </section>
     </div>
   );
