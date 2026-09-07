@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { testConnection } from "../services/projectApi.js";
 import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
+import PasswordInput from "../components/common/PasswordInput.jsx";
 import styles from "./ProjectConnectPage.module.css";
 
 const GALLERY_GRADIENTS = [
@@ -221,8 +222,7 @@ export default function ProjectConnectPage() {
             </label>
             <label className={`${styles.field} ${styles.grow}`}>
               <span className={styles.label}>비밀번호</span>
-              <input
-                type="password"
+              <PasswordInput
                 name="password"
                 className={styles.input}
                 placeholder="••••••••"
