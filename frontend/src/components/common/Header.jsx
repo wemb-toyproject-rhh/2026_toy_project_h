@@ -1,8 +1,18 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import ProjectSwitcher from "./ProjectSwitcher.jsx";
+import Icon from "./Icon.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 import styles from "./Header.module.css";
 
-export default function Header() {
+export default function Header({ hideProjectSwitcher = false }) {
+  const { userId, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <header className={styles.header}>
       <div className={styles.brandCol}>
@@ -18,13 +28,18 @@ export default function Header() {
         </Link>
       </div>
       <div className={styles.metaCol}>
-        <ProjectSwitcher />
+        {!hideProjectSwitcher && <ProjectSwitcher />}
       </div>
       <div className={styles.actionCol}>
-        <span className={styles.user}>kim.dev</span>
-        <Link to="/login" className={styles.logout}>
+        <div className={styles.userGroup}>
+          <span className={styles.user}>{userId ?? "-"}</span>
+          <Link to="/account" className={styles.settingsBtn} aria-label="계정 설정" title="계정 설정">
+            <Icon name="settings" size={15} />
+          </Link>
+        </div>
+        <button type="button" className={styles.logout} onClick={handleLogout}>
           로그아웃
-        </Link>
+        </button>
       </div>
     </header>
   );

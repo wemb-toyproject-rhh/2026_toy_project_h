@@ -55,7 +55,7 @@ export async function deleteProject(token, projectId) {
     method: "DELETE",
     headers: authHeaders(token),
   });
-  if (!res.ok) throw await parseErrorResponse(res, "프로젝트 삭제에 실패했습니다");
+  if (!res.ok) throw await parseErrorResponse(res, "연결 끊기에 실패했습니다");
   return res.json();
 }
 

@@ -1,9 +1,11 @@
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "./components/common/AppLayout.jsx";
+import HeaderLayout from "./components/common/HeaderLayout.jsx";
 import RequireAuth from "./components/common/RequireAuth.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import SignupPage from "./pages/SignupPage.jsx";
 import ProjectConnectPage from "./pages/ProjectConnectPage.jsx";
+import AccountSettingsPage from "./pages/AccountSettingsPage.jsx";
 import HistoryListPage from "./pages/HistoryListPage.jsx";
 import HistoryDetailPage from "./pages/HistoryDetailPage.jsx";
 import CompareHistoryPage from "./pages/CompareHistoryPage.jsx";
@@ -18,6 +20,9 @@ export default function App() {
       <Route path="/signup" element={<SignupPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/connect" element={<ProjectConnectPage />} />
+        <Route element={<HeaderLayout />}>
+          <Route path="/account" element={<AccountSettingsPage />} />
+        </Route>
       </Route>
       <Route element={<AppLayout />}>
         <Route path="/" element={<HistoryListPage />} />

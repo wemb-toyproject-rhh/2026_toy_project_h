@@ -190,6 +190,18 @@ const ICONS = {
       strokeLinecap="round"
     />
   ),
+  settings: (
+    <>
+      <path
+        d="M8 1.4c.32 0 .63.02.94.06l.34 1.55c.5.14.96.35 1.4.62l1.36-.75c.48.4.9.83 1.3 1.3l-.75 1.36c.27.44.48.9.62 1.4l1.55.34c.04.31.06.62.06.94s-.02.63-.06.94l-1.55.34c-.14.5-.35.96-.62 1.4l.75 1.36c-.4.48-.83.9-1.3 1.3l-1.36-.75c-.44.27-.9.48-1.4.62l-.34 1.55c-.31.04-.62.06-.94.06s-.63-.02-.94-.06l-.34-1.55a5.6 5.6 0 0 1-1.4-.62l-1.36.75c-.48-.4-.9-.83-1.3-1.3l.75-1.36a5.6 5.6 0 0 1-.62-1.4l-1.55-.34A6.9 6.9 0 0 1 1.4 8c0-.32.02-.63.06-.94l1.55-.34c.14-.5.35-.96.62-1.4l-.75-1.36c.4-.48.83-.9 1.3-1.3l1.36.75c.44-.27.9-.48 1.4-.62l.34-1.55c.31-.04.62-.06.94-.06Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.15"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.15" />
+    </>
+  ),
   trash: (
     <>
       <path d="M3 4.5h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -207,19 +219,6 @@ const ICONS = {
         strokeLinejoin="round"
       />
       <path d="M6.7 7v5M9.3 7v5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
-    </>
-  ),
-  eyeOff: (
-    <>
-      <path
-        d="M2 8s2.2-4.5 6-4.5S14 8 14 8s-2.2 4.5-6 4.5S2 8 2 8Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-      <circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M2.5 2.5l11 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     </>
   ),
 };

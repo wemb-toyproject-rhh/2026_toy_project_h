@@ -79,23 +79,14 @@ export default function PRCard({
               {item.version ? ` · v${item.version}` : ""}
             </span>
             <Button
-              variant="ghost"
+              variant="ghostDanger"
               size="icon"
-              aria-label="이력 숨기기"
-              title="이력 숨기기 (삭제되지 않고 목록에서만 안 보이게 됩니다)"
+              aria-label="이력 삭제"
+              title="이력 삭제 (실제로는 숨김 처리되며, 원본 데이터는 삭제되지 않습니다)"
               onClick={(e) => {
                 e.stopPropagation();
                 onHide?.(item.id);
               }}
-            >
-              <Icon name="eyeOff" size={14} />
-            </Button>
-            <Button
-              variant="ghostDanger"
-              size="icon"
-              aria-label="이력 삭제"
-              title="이력 삭제"
-              onClick={(e) => e.stopPropagation()}
             >
               <Icon name="trash" size={14} />
             </Button>

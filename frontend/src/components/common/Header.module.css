@@ -101,18 +101,45 @@
   padding: 0 16px;
 }
 
+.userGroup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .user {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
 }
 
+.settingsBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.settingsBtn:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
 .logout {
+  font: inherit;
   font-size: 13px;
   color: var(--color-text-secondary);
   text-decoration: none;
   padding: 6px 10px;
+  border: none;
   border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
 }
 
 .logout:hover {
