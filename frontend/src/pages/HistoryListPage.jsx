@@ -343,7 +343,9 @@ export default function HistoryListPage() {
             title={sortOrder === "desc" ? "최신순" : "오래된순"}
           >
             <Icon name="sortArrows" size={13} direction={sortOrder} />
-            {sortOrder === "asc" && <span className={styles.sortDot} />}
+            <span className={styles.sortLabel}>
+              {sortOrder === "desc" ? "최신순" : "오래된순"}
+            </span>
           </button>
         </div>
 
