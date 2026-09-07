@@ -8,6 +8,7 @@ import Icon from "../components/common/Icon.jsx";
 import styles from "./HistoryListPage.module.css";
 
 const TYPE_LABELS = { css: "CSS", html: "HTML", js: "JAVASCRIPT" };
+const PAGE_SIZE = 24;
 
 export default function HistoryListPage() {
   const { entries: allEntries, loading, error, reload, updateMetadata, hasProject } = useHistory();
@@ -67,9 +68,13 @@ export default function HistoryListPage() {
   const searchQuery = searchParams.get("q") ?? "";
   const dateFrom = searchParams.get("from") ?? "";
   const dateTo = searchParams.get("to") ?? "";
-  const activeTypes = (searchParams.get("types") ?? "")
-    .split(",")
-    .filter(type => TYPE_LABELS[type]);
+  const typesParam = searchParams.get("types") ?? "";
+  // useMemo로 typesParam 문자열이 그대로면 배열 참조도 유지합니다 — 아래 entries의
+  // useMemo가 매 렌더링마다(다른 값이 안 바뀌어도) 새로 계산되는 걸 막기 위함입니다.
+  const activeTypes = useMemo(
+    () => typesParam.split(",").filter(type => TYPE_LABELS[type]),
+    [typesParam],
+  );
   const typeFilters = {
     css: activeTypes.includes("css"),
     html: activeTypes.includes("html"),
@@ -109,6 +114,36 @@ export default function HistoryListPage() {
       return sortOrder === "asc" ? diff : -diff;
     });
   }, [allEntries, targetId, searchQuery, dateFrom, dateTo, sortOrder, activeTypes]);
+
+  // 무한 스크롤: 필터링/정렬된 결과가 아무리 많아도 한 번에 PAGE_SIZE개만 렌더링하고,
+  // 목록 아래쪽 sentinel이 보이면 더 불러옵니다. entries 자체가 바뀌면(필터/정렬/재조회)
+  // 처음부터 다시 보여줘야 하므로 visibleCount를 초기값으로 되돌립니다.
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const listRef = useRef(null);
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [entries]);
+
+  useEffect(() => {
+    const root = listRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel) return undefined;
+
+    const observer = new IntersectionObserver(
+      ([sentinelEntry]) => {
+        if (sentinelEntry.isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, entries.length));
+        }
+      },
+      { root, rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [entries.length]);
+
+  const visibleEntries = entries.slice(0, visibleCount);
 
   const hasDateFilter = Boolean(dateFrom || dateTo);
   const hasTypeFilter = activeTypes.length > 0;
@@ -375,8 +410,8 @@ export default function HistoryListPage() {
           <p className={styles.stateMessage}>이력을 불러오는 중...</p>
         )}
 
-        <div className={styles.list}>
-          {entries.map(item => (
+        <div className={styles.list} ref={listRef}>
+          {visibleEntries.map(item => (
             <PRCard
               key={item.id}
               item={item}
@@ -390,6 +425,9 @@ export default function HistoryListPage() {
               onHide={handleHide}
             />
           ))}
+          {visibleCount < entries.length && (
+            <div ref={sentinelRef} className={styles.scrollSentinel} />
+          )}
         </div>
       </div>
     </div>
