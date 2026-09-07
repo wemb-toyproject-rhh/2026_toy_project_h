@@ -60,6 +60,8 @@ function parseId(id) {
 }
 
 // 이력 목록. 페이지/컴포넌트 필터링은 프론트가 entry.targetId 기준으로 처리합니다.
+// [전체 이력 보기 화면]이 처음 열릴 때 한 번 호출합니다. 이력 상세/Diff 화면은 이때
+// 받은 목록을 그대로 재사용해서 별도로 다시 호출하지 않습니다(아래 두 API 참고).
 app.get("/api/history", async (req, res) => {
   try {
     const entries = await getAllEntries();
@@ -71,6 +73,9 @@ app.get("/api/history", async (req, res) => {
 });
 
 // 버전 비교. "/api/history/:id" 보다 먼저 등록해야 "compare" 가 :id 로 잡히지 않습니다.
+// [Diff(버전 비교) 화면]용으로 만들어뒀지만, 그 화면은 실제로는 위 GET /api/history 로
+// 이미 받아온 목록에서 클라이언트가 두 항목을 골라 비교하는 방식이라 지금은 호출되지
+// 않는 API입니다(미사용).
 app.get("/api/history/compare", async (req, res) => {
   const { v1, v2 } = req.query;
   if (!v1 || !v2) {
@@ -89,7 +94,8 @@ app.get("/api/history/compare", async (req, res) => {
   }
 });
 
-// 이력 단건 조회.
+// 이력 단건 조회. [이력 상세 화면]용으로 만들어뒀지만, 그 화면도 위 GET /api/history
+// 로 이미 받아온 목록에서 id로 찾아 쓰는 방식이라 지금은 호출되지 않는 API입니다(미사용).
 app.get("/api/history/:id", async (req, res) => {
   try {
     const entry = await getEntryById(req.params.id);
@@ -164,6 +170,8 @@ app.put("/api/history/:id/metadata", async (req, res) => {
 });
 
 // RHH 사용자 등록. 아이디/비밀번호만 받습니다 (임시 계정 관리).
+// [회원가입 화면]에서 호출합니다. 성공하면 화면이 바로 아래 로그인 API도 이어서
+// 호출해서 자동 로그인시킵니다.
 app.post("/api/rhh/users", async (req, res) => {
   const { userId, password } = req.body ?? {};
 
@@ -197,6 +205,7 @@ app.post("/api/rhh/users", async (req, res) => {
 });
 
 // RHH 로그인. 성공하면 이후 요청에 쓸 토큰을 내려줍니다.
+// [로그인 화면]에서 호출합니다(회원가입 화면도 가입 직후 자동 로그인을 위해 호출).
 app.post("/api/rhh/login", async (req, res) => {
   const { userId, password } = req.body ?? {};
 
@@ -235,6 +244,8 @@ app.post("/api/rhh/login", async (req, res) => {
 
 // 최근 접속 프로젝트 저장. project_recent 는 FK 없이 값만 들고 있는 soft
 // reference라서, 실제로 내(req.userId) 프로젝트가 맞는지 여기서 직접 확인하고 저장합니다.
+// [프로젝트 연결 화면]에서 프로젝트 목록의 [접속] 버튼을 누를 때, 그리고 새 프로젝트를
+// 등록해서 바로 선택될 때도 같이 호출됩니다.
 app.put("/api/rhh/users/me/recent-project", requireAuth, async (req, res) => {
   const { projectId } = req.body ?? {};
 
@@ -261,6 +272,9 @@ app.put("/api/rhh/users/me/recent-project", requireAuth, async (req, res) => {
 
 // 내 프로젝트 목록. requireAuth 가 채워준 req.userId 기준으로만 조회합니다 —
 // 클라이언트가 어떤 user_id 를 보내든(애초에 안 받음) 무시하고 토큰 주인만 봅니다.
+// [프로젝트 연결 화면]의 "등록된 프로젝트 목록"에서 호출합니다. [로그인 화면]도
+// 로그인 직후 "프로젝트가 있으면 이력 화면, 없으면 연결 화면"을 판단하려고 한 번
+// 호출합니다.
 app.get("/api/rhh/projects", requireAuth, async (req, res) => {
   try {
     const result = await query(
@@ -298,6 +312,7 @@ app.post("/api/rhh/projects/test-connection", requireAuth, async (req, res) => {
 // 프로젝트 등록. user_id 는 요청 본문이 아니라 토큰에서만 가져옵니다.
 // 실제로 접속 가능한 정보인지 먼저 확인하고, 안 되면 등록 자체를 거부합니다 —
 // 잘못된 접속 정보가 목록에 들어가면 나중에 이력 조회가 매번 500으로 실패하기 때문입니다.
+// [프로젝트 연결 화면]에서 [연결 테스트] 통과 후 [프로젝트 연결] 버튼을 누르면 호출됩니다.
 app.post("/api/rhh/projects", requireAuth, async (req, res) => {
   const { projectName, host, port, dbName, account, password } = req.body ?? {};
 
@@ -336,6 +351,7 @@ app.post("/api/rhh/projects", requireAuth, async (req, res) => {
 
 // 프로젝트 삭제. 실제로 지우지 않고 use=false 로만 바꿉니다(요구사항).
 // 여기도 "내 프로젝트"일 때만 지워지도록 user_id 를 조건에 같이 겁니다.
+// [프로젝트 연결 화면]의 프로젝트별 삭제(휴지통 아이콘) 버튼에서 호출합니다.
 app.delete("/api/rhh/projects/:projectId", requireAuth, async (req, res) => {
   const { projectId } = req.params;
 
