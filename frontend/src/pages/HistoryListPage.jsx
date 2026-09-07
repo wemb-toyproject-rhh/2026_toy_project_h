@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { filterEntriesByTarget } from "../services/historyAdapter.js";
 import { useHistory } from "../context/HistoryContext.jsx";
+import { useProjects } from "../context/ProjectContext.jsx";
 import PRCard from "../components/history/PRCard.jsx";
 import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
@@ -12,11 +13,19 @@ const PAGE_SIZE = 24;
 
 export default function HistoryListPage() {
   const { entries: allEntries, loading, error, reload, updateMetadata, hasProject } = useHistory();
+  const { currentProject } = useProjects();
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [filterOpen, setFilterOpen] = useState(false);
   const filterWrapRef = useRef(null);
+
+  // 프로젝트를 바꾸면 이전 프로젝트에서 체크해둔 선택 상태를 이어가면 안 됩니다 —
+  // 이력 id가 프로젝트(DB)별로 매겨져서 다른 프로젝트에 우연히 같은 id가 있으면
+  // 엉뚱한 카드가 선택된 것처럼 보이는 문제가 있었습니다.
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [currentProject?.id]);
 
   // Filter/sort criteria live in the URL (not local state) so they survive
   // navigating to a detail/compare page and back via BackLink or browser back.
