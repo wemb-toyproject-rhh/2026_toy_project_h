@@ -20,13 +20,6 @@ export default function HistoryListPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const filterWrapRef = useRef(null);
 
-  // 프로젝트를 바꾸면 이전 프로젝트에서 체크해둔 선택 상태를 이어가면 안 됩니다 —
-  // 이력 id가 프로젝트(DB)별로 매겨져서 다른 프로젝트에 우연히 같은 id가 있으면
-  // 엉뚱한 카드가 선택된 것처럼 보이는 문제가 있었습니다.
-  useEffect(() => {
-    setSelectedIds([]);
-  }, [currentProject?.id]);
-
   // Filter/sort criteria live in the URL (not local state) so they survive
   // navigating to a detail/compare page and back via BackLink or browser back.
   const updateParams = updates => {
@@ -39,6 +32,26 @@ export default function HistoryListPage() {
       return next;
     });
   };
+
+  // 프로젝트를 바꾸면 이전 프로젝트에서 체크해둔 선택/필터/정렬을 이어가면 안 됩니다 —
+  // 이력 id가 프로젝트(DB)별로 매겨져서 다른 프로젝트에 우연히 같은 id가 있으면 엉뚱한
+  // 카드가 선택된 것처럼 보이거나, 존재하지 않는 타겟으로 필터링된 채 남을 수 있습니다.
+  // lastProjectIdRef로 "진짜 전환"(A → B)만 골라내고, 최초 로딩 시의 undefined → 실제
+  // id 전환(딥링크로 들어온 필터/정렬 값이 있을 수 있음)은 초기화하지 않습니다.
+  const lastProjectIdRef = useRef(undefined);
+  useEffect(() => {
+    const id = currentProject?.id;
+    if (id === undefined) return;
+    if (lastProjectIdRef.current !== undefined && lastProjectIdRef.current !== id) {
+      setSelectedIds([]);
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        ["target", "q", "from", "to", "types", "sort"].forEach(key => next.delete(key));
+        return next;
+      });
+    }
+    lastProjectIdRef.current = id;
+  }, [currentProject?.id, setSearchParams]);
 
   useEffect(() => {
     if (!filterOpen) return undefined;
