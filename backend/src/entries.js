@@ -1,7 +1,12 @@
 // tb_page_hist / tb_instance_hist 원본 행을, 프론트(frontend/src/mocks/historyAdapter.js)가
 // 목데이터로 만들어내던 것과 같은 모양의 "entry" 로 가공합니다.
 // 나중에 그쪽 mock 함수를 이 API 호출로 바꿀 때 모양이 같아야 손댈 게 적습니다.
-import { query } from "./db.js";
+//
+// tb_page_hist / tb_instance_hist 는 RHH 자체 DB(db.js 의 고정 풀)가 아니라 사용자가
+// 선택한 프로젝트가 가리키는 대상 DB에 있습니다. 그래서 이 파일의 함수들은 어떤 풀을 쓸지
+// 호출하는 쪽(server.js)이 `query` 옵션으로 넘겨주고, 안 넘기면 기존 동작대로 RHH 고정
+// 풀을 기본값으로 씁니다(테스트/단독 호출 시 편의를 위함).
+import { query as defaultQuery } from "./db.js";
 import { countLineDiff } from "./diff.js";
 
 const PAGE_LIFECYCLES = [
@@ -182,8 +187,8 @@ function buildInstanceEntry(row, prev, seq) {
 // title/hidden 처럼 나중에 컬럼이 추가돼도 SELECT 를 매번 고칠 필요가 없습니다.
 // (buildPageEntry/buildInstanceEntry 가 실제로 쓰는 필드만 골라 응답에 담으므로,
 // props 같은 무거운 컬럼이 딸려와도 API 응답 크기에는 영향이 없습니다.)
-async function fetchPageRows() {
-  const { rows } = await query(`
+async function fetchPageRows(runQuery) {
+  const { rows } = await runQuery(`
     SELECT p.*,
            COALESCE(u.name, p.last_user) AS author,
            to_char(p.update_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at
@@ -199,8 +204,8 @@ async function fetchPageRows() {
 // 이력이 있으면, targetTree 를 만들 때 그 페이지 이름을 알 방법이 없기 때문입니다.
 // (ih.* 로 명시적으로 별칭을 줘서, tb_page 의 name 컬럼이 인스턴스 자신의 name 을
 // 덮어쓰지 않도록 합니다 — 두 테이블 다 name 컬럼이 있어서 실수하기 쉬운 지점입니다.)
-async function fetchInstanceRows() {
-  const { rows } = await query(`
+async function fetchInstanceRows(runQuery) {
+  const { rows } = await runQuery(`
     SELECT ih.*,
            pg.name AS page_name,
            to_char(ih.reg_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at
@@ -214,8 +219,12 @@ async function fetchInstanceRows() {
 // 전체 이력을 최신순으로 반환합니다. GET /api/history 가 그대로 씁니다.
 // includeHidden 이 false(기본값)면 숨김 처리된 이력은 목록에서 빠집니다 —
 // "전체 이력 보기" 화면은 숨긴 이력을 안 보여줘야 하기 때문입니다.
-export async function getAllEntries({ includeHidden = false } = {}) {
-  const [pageRows, instanceRows] = await Promise.all([fetchPageRows(), fetchInstanceRows()]);
+// query 는 어느 프로젝트(대상 DB)에서 조회할지를 결정합니다 (server.js 가 넘겨줌).
+export async function getAllEntries({ includeHidden = false, query: runQuery = defaultQuery } = {}) {
+  const [pageRows, instanceRows] = await Promise.all([
+    fetchPageRows(runQuery),
+    fetchInstanceRows(runQuery),
+  ]);
 
   const entries = [];
   for (const rows of groupByTarget(pageRows, "page_id").values()) {
@@ -236,7 +245,7 @@ export async function getAllEntries({ includeHidden = false } = {}) {
 // id 는 "page-39" / "inst-101" 형태입니다.
 // 단건 조회는 숨김 여부와 무관하게 항상 찾을 수 있어야 합니다 — 상세/비교 화면
 // 접근, 그리고 숨김 처리 직후 "수정된 이력"을 응답으로 돌려주는 데도 쓰이기 때문입니다.
-export async function getEntryById(id) {
-  const entries = await getAllEntries({ includeHidden: true });
+export async function getEntryById(id, { query: runQuery = defaultQuery } = {}) {
+  const entries = await getAllEntries({ includeHidden: true, query: runQuery });
   return entries.find((e) => e.id === id) ?? null;
 }
