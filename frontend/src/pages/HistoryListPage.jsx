@@ -406,12 +406,12 @@ export default function HistoryListPage() {
           </div>
         )}
 
-        {hasProject && !error && loading && allEntries.length === 0 && (
+        {hasProject && !error && loading && (
           <p className={styles.stateMessage}>이력을 불러오는 중...</p>
         )}
 
         <div className={styles.list} ref={listRef}>
-          {visibleEntries.map(item => (
+          {hasProject && !error && !loading && visibleEntries.map(item => (
             <PRCard
               key={item.id}
               item={item}
@@ -425,7 +425,7 @@ export default function HistoryListPage() {
               onHide={handleHide}
             />
           ))}
-          {visibleCount < entries.length && (
+          {!loading && visibleCount < entries.length && (
             <div ref={sentinelRef} className={styles.scrollSentinel} />
           )}
         </div>
