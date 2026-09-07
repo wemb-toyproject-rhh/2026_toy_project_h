@@ -489,6 +489,18 @@ app.post("/api/rhh/projects", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "port 는 1~65535 사이의 숫자여야 합니다" });
   }
 
+  // 같은 host+port+db_name 조합을 내가 이미 등록해뒀으면 또 등록 못 하게 막습니다.
+  // (다른 사용자가 같은 대상 DB를 등록하는 건 정상적인 상황이라 막지 않습니다 — 팀원끼리
+  // 같은 운영 DB를 각자 모니터링할 수 있어야 하므로, 이 중복 체크는 "내 프로젝트 안에서만" 입니다.)
+  const dup = await query(
+    `SELECT project_id FROM tb_project_list
+     WHERE user_id = $1 AND host = $2 AND port = $3 AND db_name = $4 AND use = true`,
+    [req.userId, host, portNum, dbName],
+  );
+  if (dup.rowCount > 0) {
+    return res.status(409).json({ error: "이미 등록한 프로젝트입니다 (같은 host/port/DB 이름 조합)" });
+  }
+
   const test = await testConnection({ host, port: portNum, database: dbName, user: account, password });
   if (!test.ok) {
     return res.status(400).json({ error: `대상 DB에 연결할 수 없습니다: ${test.error}` });
