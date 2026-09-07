@@ -151,6 +151,9 @@ function buildInstanceEntry(row, prev, seq) {
     kind: row.category,
     targetId: row.inst_id,
     pageTargetId: row.page_id ?? null,
+    // 이 페이지 자체의 이력(tb_page_hist)이 없을 때, 프론트가 사이드바 트리에
+    // 페이지 노드를 만들 때 쓸 이름입니다 (tb_page 조인 결과, 없으면 null).
+    pageTargetName: row.page_name ?? null,
     // comp_name 이 아니라 name 이 화면에 표시할 인스턴스 이름입니다 (comp_name 은 다른 값).
     targetLabel: `[${is3D ? "3D" : "2D"}] ${row.name}`,
     targetName: row.name,
@@ -191,11 +194,19 @@ async function fetchPageRows() {
   return rows;
 }
 
+// tb_page(현재 상태 테이블)를 조인해서 page_name 을 같이 내려줍니다 — 어떤 페이지가
+// 한 번도 직접 저장된 적 없고(=tb_page_hist에 행이 없고) 그 안의 컴포넌트만 저장된
+// 이력이 있으면, targetTree 를 만들 때 그 페이지 이름을 알 방법이 없기 때문입니다.
+// (ih.* 로 명시적으로 별칭을 줘서, tb_page 의 name 컬럼이 인스턴스 자신의 name 을
+// 덮어쓰지 않도록 합니다 — 두 테이블 다 name 컬럼이 있어서 실수하기 쉬운 지점입니다.)
 async function fetchInstanceRows() {
   const { rows } = await query(`
-    SELECT *, to_char(reg_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at
-    FROM tb_instance_hist
-    ORDER BY inst_id, hist_id ASC
+    SELECT ih.*,
+           pg.name AS page_name,
+           to_char(ih.reg_dt, 'YYYY-MM-DD HH24:MI:SS') AS saved_at
+    FROM tb_instance_hist ih
+    LEFT JOIN tb_page pg ON pg.page_id = ih.page_id
+    ORDER BY ih.inst_id, ih.hist_id ASC
   `);
   return rows;
 }
