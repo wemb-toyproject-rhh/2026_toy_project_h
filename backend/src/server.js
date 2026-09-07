@@ -242,6 +242,80 @@ app.post("/api/rhh/login", async (req, res) => {
   }
 });
 
+// [계정정보 수정 화면] 비밀번호 변경. 현재 비밀번호를 확인한 뒤에만 바꿉니다
+// (로그인과 같은 방식으로 bcrypt 비교).
+app.put("/api/rhh/users/me/password", requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body ?? {};
+
+  if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
+    return res.status(400).json({ error: "현재 비밀번호와 새 비밀번호를 입력해 주세요" });
+  }
+  if (newPassword.length < PASSWORD_MIN) {
+    return res.status(400).json({ error: `새 비밀번호는 최소 ${PASSWORD_MIN}자 이상이어야 합니다` });
+  }
+
+  try {
+    const result = await query(`SELECT password FROM tb_user_rhh WHERE user_id = $1`, [req.userId]);
+    const row = result.rows[0];
+    if (!row) {
+      return res.status(404).json({ error: "계정을 찾을 수 없습니다" });
+    }
+
+    const currentOk = await verifyPassword(currentPassword, row.password);
+    if (!currentOk) {
+      return res.status(401).json({ error: "현재 비밀번호가 올바르지 않습니다" });
+    }
+
+    const hashed = await hashPassword(newPassword);
+    await query(`UPDATE tb_user_rhh SET password = $1 WHERE user_id = $2`, [hashed, req.userId]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[PUT /api/rhh/users/me/password]", err.message);
+    res.status(500).json({ error: "비밀번호 변경 실패", detail: err.message });
+  }
+});
+
+// [계정정보 수정 화면] 회원 탈퇴. 실제로 지우지 않고 use=false 로만 바꿉니다 —
+// 프로젝트 삭제(DELETE /api/rhh/projects/:id)와 같은 소프트 삭제 방식입니다.
+// 탈퇴 확인 차원에서 비밀번호를 다시 받고, 갖고 있던 활성 프로젝트도 같이 정리합니다.
+//
+// 주의: requireAuth 는 JWT 서명/만료만 확인하고 매 요청마다 use 를 다시 조회하진
+// 않아서, 탈퇴 직후에도 이미 발급된 토큰은 만료 전까지(최대 7일) 다른 API 호출엔
+// 계속 쓰일 수 있습니다 — "계정 정지"(use=false)도 원래 같은 특성이라 이번에 새로
+// 생긴 문제는 아니지만, 신경 쓰인다면 나중에 requireAuth 에서도 use 를 같이 확인하도록
+// 바꿔야 합니다.
+app.delete("/api/rhh/users/me", requireAuth, async (req, res) => {
+  const { password } = req.body ?? {};
+
+  if (typeof password !== "string") {
+    return res.status(400).json({ error: "비밀번호를 입력해 주세요" });
+  }
+
+  try {
+    const result = await query(`SELECT password FROM tb_user_rhh WHERE user_id = $1 AND use = true`, [
+      req.userId,
+    ]);
+    const row = result.rows[0];
+    if (!row) {
+      return res.status(404).json({ error: "계정을 찾을 수 없습니다" });
+    }
+
+    const passwordOk = await verifyPassword(password, row.password);
+    if (!passwordOk) {
+      return res.status(401).json({ error: "비밀번호가 올바르지 않습니다" });
+    }
+
+    await query(`UPDATE tb_user_rhh SET use = false WHERE user_id = $1`, [req.userId]);
+    await query(`UPDATE tb_project_list SET use = false, updated_at = now() WHERE user_id = $1 AND use = true`, [
+      req.userId,
+    ]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[DELETE /api/rhh/users/me]", err.message);
+    res.status(500).json({ error: "회원 탈퇴 실패", detail: err.message });
+  }
+});
+
 // 최근 접속 프로젝트 저장. project_recent 는 FK 없이 값만 들고 있는 soft
 // reference라서, 실제로 내(req.userId) 프로젝트가 맞는지 여기서 직접 확인하고 저장합니다.
 // [프로젝트 연결 화면]에서 프로젝트 목록의 [접속] 버튼을 누를 때, 그리고 새 프로젝트를
