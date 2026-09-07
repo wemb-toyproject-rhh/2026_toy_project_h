@@ -5,19 +5,10 @@ import Icon from "./Icon.jsx";
 import styles from "./ProjectSwitcher.module.css";
 
 export default function ProjectSwitcher() {
-  const { projects, currentProject, setCurrentProjectId, removeProject } = useProjects();
+  const { projects, currentProject, selectProject } = useProjects();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
   const navigate = useNavigate();
-
-  const handleDisconnect = (id) => {
-    const wasLast = projects.length <= 1;
-    removeProject(id);
-    if (wasLast) {
-      setOpen(false);
-      navigate("/connect");
-    }
-  };
 
   useEffect(() => {
     if (!open) return undefined;
@@ -53,36 +44,20 @@ export default function ProjectSwitcher() {
       {open && (
         <div className={styles.panel}>
           {projects.map((project) => (
-            <div
+            <button
               key={project.id}
-              className={`${styles.optionRow} ${project.id === currentProject?.id ? styles.active : ""}`}
+              type="button"
+              className={`${styles.option} ${project.id === currentProject?.id ? styles.active : ""}`}
+              onClick={() => {
+                selectProject(project.id);
+                setOpen(false);
+              }}
             >
-              <button
-                type="button"
-                className={styles.option}
-                onClick={() => {
-                  setCurrentProjectId(project.id);
-                  setOpen(false);
-                }}
-              >
-                <span className={styles.optionName}>{project.name}</span>
-                <span className={styles.optionMeta}>
-                  {project.host}:{project.port} · {project.dbname}
-                </span>
-              </button>
-              <button
-                type="button"
-                className={styles.disconnectBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDisconnect(project.id);
-                }}
-                aria-label={`${project.name} 연결 끊기`}
-                title="연결 끊기"
-              >
-                연결 끊기
-              </button>
-            </div>
+              <span className={styles.optionName}>{project.name}</span>
+              <span className={styles.optionMeta}>
+                {project.host}:{project.port} · {project.dbname}
+              </span>
+            </button>
           ))}
 
           <div className={styles.divider} />

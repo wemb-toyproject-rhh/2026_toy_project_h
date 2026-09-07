@@ -199,7 +199,9 @@ async function fetchInstanceRows() {
 }
 
 // 전체 이력을 최신순으로 반환합니다. GET /api/history 가 그대로 씁니다.
-export async function getAllEntries() {
+// includeHidden 이 false(기본값)면 숨김 처리된 이력은 목록에서 빠집니다 —
+// "전체 이력 보기" 화면은 숨긴 이력을 안 보여줘야 하기 때문입니다.
+export async function getAllEntries({ includeHidden = false } = {}) {
   const [pageRows, instanceRows] = await Promise.all([fetchPageRows(), fetchInstanceRows()]);
 
   const entries = [];
@@ -211,11 +213,13 @@ export async function getAllEntries() {
   }
 
   entries.sort((a, b) => new Date(b.savedAtRaw) - new Date(a.savedAtRaw));
-  return entries;
+  return includeHidden ? entries : entries.filter((entry) => !entry.hidden);
 }
 
 // id 는 "page-39" / "inst-101" 형태입니다.
+// 단건 조회는 숨김 여부와 무관하게 항상 찾을 수 있어야 합니다 — 상세/비교 화면
+// 접근, 그리고 숨김 처리 직후 "수정된 이력"을 응답으로 돌려주는 데도 쓰이기 때문입니다.
 export async function getEntryById(id) {
-  const entries = await getAllEntries();
+  const entries = await getAllEntries({ includeHidden: true });
   return entries.find((e) => e.id === id) ?? null;
 }
