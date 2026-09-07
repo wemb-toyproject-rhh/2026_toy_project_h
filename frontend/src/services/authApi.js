@@ -50,3 +50,18 @@ export async function changePassword(token, currentPassword, newPassword) {
   if (!res.ok) throw new Error(data.error || `비밀번호 변경에 실패했습니다 (${res.status})`);
   return data; // { ok: true }
 }
+
+// 실제로 지우지 않고 use=false 로만 바뀝니다(연결된 프로젝트도 같이 비활성화).
+export async function deleteAccount(token, password) {
+  const res = await fetch(`${BASE}/users/me`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `계정 삭제에 실패했습니다 (${res.status})`);
+  return data; // { ok: true }
+}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useProjects } from "../context/ProjectContext.jsx";
-import { changeNickname, changePassword } from "../services/authApi.js";
+import { changeNickname, changePassword, deleteAccount } from "../services/authApi.js";
 import Button from "../components/common/Button.jsx";
 import BackLink from "../components/common/BackLink.jsx";
 import PasswordInput from "../components/common/PasswordInput.jsx";
@@ -23,6 +23,9 @@ export default function AccountSettingsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const handleNicknameSubmit = async (event) => {
     event.preventDefault();
@@ -89,6 +92,35 @@ export default function AccountSettingsPage() {
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  const handleDeleteAccount = async (event) => {
+    event.preventDefault();
+    if (deleteSubmitting) return;
+    setDeleteError("");
+
+    if (!deletePassword) {
+      setDeleteError("비밀번호를 입력해 주세요");
+      return;
+    }
+    if (
+      !window.confirm(
+        "정말 계정을 삭제하시겠어요? 연결된 프로젝트 정보도 함께 사라지며 되돌릴 수 없습니다.",
+      )
+    ) {
+      return;
+    }
+
+    setDeleteSubmitting(true);
+    try {
+      await deleteAccount(token, deletePassword);
+      logout();
+      navigate("/login");
+    } catch (err) {
+      setDeleteError(err.message || "계정 삭제에 실패했습니다");
+    } finally {
+      setDeleteSubmitting(false);
+    }
   };
 
   return (
@@ -198,18 +230,26 @@ export default function AccountSettingsPage() {
       </section>
 
       <section className={`${styles.card} ${styles.dangerCard}`}>
-        <div className={styles.dangerRow}>
-          <div>
-            <h2 className={styles.sectionTitle}>계정 삭제</h2>
-            <p className={styles.dangerText}>
-              계정을 삭제하면 연결된 프로젝트 정보가 모두 사라지며 되돌릴 수 없습니다.
-            </p>
-            <p className={styles.hint}>계정 삭제 API가 아직 준비되지 않았습니다</p>
-          </div>
-          <Button type="button" variant="danger" disabled title="백엔드 API 준비 중">
-            계정 삭제
+        <h2 className={styles.sectionTitle}>계정 삭제</h2>
+        <p className={styles.dangerText}>
+          계정을 삭제하면 연결된 프로젝트 정보가 모두 사라지며 되돌릴 수 없습니다.
+        </p>
+        <form className={styles.dangerForm} onSubmit={handleDeleteAccount}>
+          <PasswordInput
+            className={styles.input}
+            placeholder="비밀번호 확인"
+            value={deletePassword}
+            onChange={(event) => {
+              setDeletePassword(event.target.value);
+              setDeleteError("");
+            }}
+            autoComplete="current-password"
+          />
+          <Button type="submit" variant="danger" disabled={deleteSubmitting}>
+            {deleteSubmitting ? "삭제 중..." : "계정 삭제"}
           </Button>
-        </div>
+        </form>
+        {deleteError && <p className={styles.error}>{deleteError}</p>}
       </section>
     </div>
   );
