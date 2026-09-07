@@ -2,22 +2,52 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useProjects } from "../context/ProjectContext.jsx";
-import { changePassword } from "../services/authApi.js";
+import { changeNickname, changePassword } from "../services/authApi.js";
 import Button from "../components/common/Button.jsx";
 import BackLink from "../components/common/BackLink.jsx";
 import PasswordInput from "../components/common/PasswordInput.jsx";
 import styles from "./AccountSettingsPage.module.css";
 
 const PASSWORD_MIN = 4;
+const USER_NAME_MAX = 100;
 
 export default function AccountSettingsPage() {
   const navigate = useNavigate();
-  const { userId, token, logout } = useAuth();
+  const { userId, userName, token, logout, setUserName } = useAuth();
   const { projects } = useProjects();
+  const [nickname, setNickname] = useState(userName ?? "");
+  const [nicknameError, setNicknameError] = useState("");
+  const [nicknameSuccess, setNicknameSuccess] = useState(false);
+  const [nicknameSubmitting, setNicknameSubmitting] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: "", next: "", confirm: "" });
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+
+  const handleNicknameSubmit = async (event) => {
+    event.preventDefault();
+    if (nicknameSubmitting) return;
+    setNicknameError("");
+    setNicknameSuccess(false);
+
+    const trimmed = nickname.trim();
+    if (trimmed.length > USER_NAME_MAX) {
+      setNicknameError(`닉네임은 ${USER_NAME_MAX}자를 넘을 수 없습니다`);
+      return;
+    }
+
+    setNicknameSubmitting(true);
+    try {
+      const { userName: saved } = await changeNickname(token, trimmed);
+      setUserName(saved);
+      setNickname(saved ?? "");
+      setNicknameSuccess(true);
+    } catch (err) {
+      setNicknameError(err.message || "닉네임 변경에 실패했습니다");
+    } finally {
+      setNicknameSubmitting(false);
+    }
+  };
 
   const handlePasswordField = (field) => (event) => {
     setPasswordSuccess(false);
@@ -68,18 +98,45 @@ export default function AccountSettingsPage() {
 
       <section className={styles.card}>
         <h2 className={styles.sectionTitle}>계정 정보</h2>
-        <div className={styles.infoGrid}>
-          <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>아이디</span>
-            <span className={styles.infoValue}>{userId ?? "-"}</span>
+        <div className={styles.infoBlock}>
+          <div className={styles.infoGrid}>
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>아이디</span>
+              <span className={styles.infoValue}>{userId ?? "-"}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>연결된 프로젝트</span>
+              <span className={styles.infoValue}>
+                {projects.length > 0 ? `${projects.length}개` : "없음"}
+              </span>
+            </div>
           </div>
-          <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>연결된 프로젝트</span>
-            <span className={styles.infoValue}>
-              {projects.length > 0 ? `${projects.length}개` : "없음"}
-            </span>
-          </div>
+
+          <form className={styles.nicknameForm} onSubmit={handleNicknameSubmit}>
+          <label className={styles.field}>
+            <span className={styles.label}>닉네임</span>
+            <div className={styles.nicknameRow}>
+              <input
+                type="text"
+                className={styles.input}
+                placeholder="닉네임을 입력하세요"
+                value={nickname}
+                onChange={(event) => {
+                  setNickname(event.target.value);
+                  setNicknameSuccess(false);
+                }}
+                maxLength={USER_NAME_MAX}
+              />
+              <Button type="submit" variant="default" size="sm" disabled={nicknameSubmitting}>
+                {nicknameSubmitting ? "저장 중..." : "저장"}
+              </Button>
+            </div>
+          </label>
+          {nicknameError && <p className={styles.error}>{nicknameError}</p>}
+          {nicknameSuccess && <p className={styles.success}>닉네임이 저장되었습니다</p>}
+          </form>
         </div>
+
         <div className={styles.actions}>
           <Button
             type="button"

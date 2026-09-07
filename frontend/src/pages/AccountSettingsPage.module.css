@@ -49,6 +49,12 @@
   color: var(--color-text);
 }
 
+.infoBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .infoGrid {
   display: flex;
   gap: 24px;
@@ -76,6 +82,22 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.nicknameForm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nicknameRow {
+  display: flex;
+  gap: 8px;
+}
+
+.nicknameRow .input {
+  flex: 1;
+  min-width: 0;
 }
 
 .row {

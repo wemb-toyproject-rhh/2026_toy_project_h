@@ -19,7 +19,22 @@ export async function login(userId, password) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `로그인에 실패했습니다 (${res.status})`);
-  return data; // { token, userId, projectRecent }
+  return data; // { token, userId, projectRecent, userName }
+}
+
+// 빈 문자열을 보내면 닉네임을 지웁니다(백엔드가 null로 저장).
+export async function changeNickname(token, userName) {
+  const res = await fetch(`${BASE}/users/me/nickname`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ userName }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `닉네임 변경에 실패했습니다 (${res.status})`);
+  return data; // { userName }
 }
 
 export async function changePassword(token, currentPassword, newPassword) {
