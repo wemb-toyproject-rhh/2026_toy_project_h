@@ -6,7 +6,7 @@ export async function fetchHistoryEntries() {
   return res.json();
 }
 
-// fields: { title } and/or { comment } — only the keys provided are updated.
+// fields: { title } / { comment } / { hidden } — only the keys provided are updated.
 export async function updateHistoryMetadata(id, fields) {
   const res = await fetch(`${BASE}/${id}/metadata`, {
     method: "PUT",

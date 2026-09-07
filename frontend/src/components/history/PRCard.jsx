@@ -12,6 +12,7 @@ export default function PRCard({
   selectionDisabled = false,
   onToggleSelect,
   onRenameTitle,
+  onHide,
 }) {
   const navigate = useNavigate();
   const toggleBlocked = !selected && selectionDisabled;
@@ -77,6 +78,18 @@ export default function PRCard({
               {item.savedAt}
               {item.version ? ` · v${item.version}` : ""}
             </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="이력 숨기기"
+              title="이력 숨기기 (삭제되지 않고 목록에서만 안 보이게 됩니다)"
+              onClick={(e) => {
+                e.stopPropagation();
+                onHide?.(item.id);
+              }}
+            >
+              <Icon name="eyeOff" size={14} />
+            </Button>
             <Button
               variant="ghostDanger"
               size="icon"

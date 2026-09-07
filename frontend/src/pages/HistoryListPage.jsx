@@ -52,6 +52,12 @@ export default function HistoryListPage() {
     updateMetadata(id, { title: newTitle });
   };
 
+  // 실제 데이터는 지우지 않고 hidden 플래그만 세워서, 이 이력이 "전체 이력
+  // 보기"에서만 안 보이게 합니다 (HistoryContext.updateMetadata 가 로컬 목록에서도 같이 걷어냄).
+  const handleHide = (id) => {
+    updateMetadata(id, { hidden: true });
+  };
+
   const targetId = searchParams.get("target");
   const activeTargetLabel = targetId
     ? allEntries.find(entry => entry.targetId === targetId)?.targetLabel
@@ -354,6 +360,7 @@ export default function HistoryListPage() {
               }
               onToggleSelect={toggleSelect}
               onRenameTitle={handleRenameTitle}
+              onHide={handleHide}
             />
           ))}
         </div>

@@ -169,6 +169,19 @@ const ICONS = {
       <path d="M6.7 7v5M9.3 7v5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
     </>
   ),
+  eyeOff: (
+    <>
+      <path
+        d="M2 8s2.2-4.5 6-4.5S14 8 14 8s-2.2 4.5-6 4.5S2 8 2 8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M2.5 2.5l11 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 14, className = "", direction }) {

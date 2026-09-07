@@ -5,7 +5,7 @@ import Icon from "./Icon.jsx";
 import styles from "./ProjectSwitcher.module.css";
 
 export default function ProjectSwitcher() {
-  const { projects, currentProject, setCurrentProjectId } = useProjects();
+  const { projects, currentProject, selectProject } = useProjects();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ export default function ProjectSwitcher() {
               type="button"
               className={`${styles.option} ${project.id === currentProject?.id ? styles.active : ""}`}
               onClick={() => {
-                setCurrentProjectId(project.id);
+                selectProject(project.id);
                 setOpen(false);
               }}
             >
