@@ -97,7 +97,7 @@ export default function ProjectSwitcher() {
             className={styles.addOption}
             onClick={() => {
               setOpen(false);
-              navigate("/connect");
+              navigate("/connect", { state: { openGallery: false } });
             }}
           >
             + 새 프로젝트 연결

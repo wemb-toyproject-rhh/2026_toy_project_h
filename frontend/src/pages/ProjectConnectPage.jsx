@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useProjects } from "../context/ProjectContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { testConnection } from "../services/projectApi.js";
@@ -7,16 +7,62 @@ import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
 import styles from "./ProjectConnectPage.module.css";
 
+const GALLERY_GRADIENTS = [
+  "linear-gradient(135deg, #6366f1, #a855f7)",
+  "linear-gradient(135deg, #06b6d4, #3b82f6)",
+  "linear-gradient(135deg, #f59e0b, #ef4444)",
+  "linear-gradient(135deg, #10b981, #06b6d4)",
+  "linear-gradient(135deg, #ec4899, #8b5cf6)",
+  "linear-gradient(135deg, #f43f5e, #f59e0b)",
+];
+
+function gradientForProject(id) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return GALLERY_GRADIENTS[hash % GALLERY_GRADIENTS.length];
+}
+
 export default function ProjectConnectPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { token } = useAuth();
   const { projects, currentProject, loading, selectProject, addProject, deleteProject } =
     useProjects();
+
+  // 어디서 들어왔는지에 따라 갤러리 초기 상태를 명시적으로 지정할 수 있습니다
+  // (헤더의 "+ 새 프로젝트 연결" → 접힘, 계정 설정의 "프로젝트 연결 관리" → 펼침).
+  // 지정이 없으면(그냥 /connect로 들어온 경우) 아래 자동 펼침 로직을 따릅니다.
+  const forcedGalleryOpen = location.state?.openGallery;
 
   const formRef = useRef(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [galleryOpen, setGalleryOpen] = useState(forcedGalleryOpen === true);
+  const [galleryQuery, setGalleryQuery] = useState("");
+  const autoOpenedRef = useRef(false);
+  const hasFetchedRef = useRef(false);
+
+  // 연결된 프로젝트가 있으면 처음 진입 시 갤러리를 자동으로 펼쳐줍니다. loading이
+  // true였다가 false로 돌아오는 시점(=목록 요청이 실제로 한 번 끝난 시점)을 기다려서
+  // 판단하고, 이후 사용자가 직접 접어도 다시 안 펼쳐지게 딱 한 번만 적용합니다.
+  // 진입 경로가 갤러리 상태를 명시했다면(forcedGalleryOpen) 이 자동 판단은 건너뜁니다.
+  useEffect(() => {
+    if (loading) hasFetchedRef.current = true;
+  }, [loading]);
+
+  useEffect(() => {
+    if (forcedGalleryOpen !== undefined) return;
+    if (autoOpenedRef.current || loading || !hasFetchedRef.current) return;
+    autoOpenedRef.current = true;
+    if (projects.length > 0) setGalleryOpen(true);
+  }, [loading, projects.length, forcedGalleryOpen]);
+
+  const filteredProjects = useMemo(() => {
+    const query = galleryQuery.trim().toLowerCase();
+    if (!query) return projects;
+    return projects.filter((project) => project.name.toLowerCase().includes(query));
+  }, [projects, galleryQuery]);
 
   // null | "testing" | "ok" | "fail" — 접속 필드를 고치면 다시 테스트해야 하므로 초기화합니다.
   const [testState, setTestState] = useState(null);
@@ -111,6 +157,7 @@ export default function ProjectConnectPage() {
   return (
     <div className={styles.screen}>
       <div className={styles.layout}>
+        <div className={styles.formColumn}>
         <form className={styles.card} onSubmit={handleSubmit} ref={formRef}>
           <span className={styles.brand}>RHH</span>
           <h1 className={styles.title}>프로젝트 연결</h1>
@@ -134,7 +181,7 @@ export default function ProjectConnectPage() {
                 type="text"
                 name="host"
                 className={styles.input}
-                placeholder="10.23.131.39"
+                placeholder="192.168.0.10"
                 onChange={resetTestState}
               />
             </label>
@@ -144,7 +191,7 @@ export default function ProjectConnectPage() {
                 type="text"
                 name="port"
                 className={styles.input}
-                placeholder="5434"
+                placeholder="5432"
                 onChange={resetTestState}
               />
             </label>
@@ -156,7 +203,7 @@ export default function ProjectConnectPage() {
               type="text"
               name="dbname"
               className={styles.input}
-              placeholder="hjjo_local"
+              placeholder="renobit"
               onChange={resetTestState}
             />
           </label>
@@ -217,54 +264,83 @@ export default function ProjectConnectPage() {
           </div>
         </form>
 
-        <aside className={`${styles.card} ${styles.listCard}`}>
-          <h2 className={styles.listTitle}>등록된 프로젝트 목록</h2>
+        <button
+          type="button"
+          className={styles.galleryToggle}
+          aria-expanded={galleryOpen}
+          onClick={() => setGalleryOpen((v) => !v)}
+        >
+          <Icon name="chevron" size={11} className={styles.galleryToggleIcon} />
+          {galleryOpen ? "접기" : "연결된 프로젝트 보기"}
+        </button>
+        </div>
 
-          {loading && projects.length === 0 ? (
-            <p className={styles.empty}>불러오는 중...</p>
-          ) : projects.length === 0 ? (
-            <p className={styles.empty}>등록된 프로젝트가 없습니다</p>
-          ) : (
-            <ul className={styles.list}>
-              {projects.map((project) => (
-                <li
-                  key={project.id}
-                  className={`${styles.listItem} ${
-                    project.id === currentProject?.id ? styles.active : ""
-                  }`}
-                >
-                  <div className={styles.listItemInfo}>
-                    <span className={styles.listItemName}>{project.name}</span>
-                    <span className={styles.listItemMeta}>
-                      {project.host}:{project.port} · {project.dbname}
-                    </span>
-                  </div>
-                  <div className={styles.listItemActions}>
-                    <Button
+        <div className={`${styles.gallery} ${galleryOpen ? styles.galleryOpen : ""}`}>
+          <div className={styles.galleryInner}>
+            <div className={styles.galleryHeader}>
+              <h2 className={styles.listTitle}>등록된 프로젝트</h2>
+              <label className={styles.gallerySearch}>
+                <Icon name="search" size={12} />
+                <input
+                  type="text"
+                  placeholder="프로젝트 검색"
+                  value={galleryQuery}
+                  onChange={(event) => setGalleryQuery(event.target.value)}
+                />
+              </label>
+            </div>
+
+            {loading && projects.length === 0 ? (
+              <p className={styles.empty}>불러오는 중...</p>
+            ) : projects.length === 0 ? (
+              <p className={styles.empty}>등록된 프로젝트가 없습니다</p>
+            ) : filteredProjects.length === 0 ? (
+              <p className={styles.empty}>검색 결과가 없습니다</p>
+            ) : (
+              <div className={styles.galleryGrid}>
+                {filteredProjects.map((project) => (
+                  <div
+                    key={project.id}
+                    className={`${styles.tile} ${
+                      project.id === currentProject?.id ? styles.tileActive : ""
+                    }`}
+                  >
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
+                      className={styles.tileMain}
                       onClick={() => handleSelect(project.id)}
                     >
-                      접속
-                    </Button>
+                      <div
+                        className={styles.thumb}
+                        style={{ background: gradientForProject(project.id) }}
+                      >
+                        <span className={styles.thumbInitial}>
+                          {project.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <span className={styles.tileName}>{project.name}</span>
+                      <span className={styles.tileMeta}>
+                        {project.host}:{project.port}
+                      </span>
+                    </button>
                     <Button
                       type="button"
                       variant="ghostDanger"
                       size="icon"
+                      className={styles.tileDelete}
                       aria-label="프로젝트 삭제"
                       title="프로젝트 삭제"
                       disabled={deletingId === project.id}
                       onClick={(event) => handleDelete(event, project.id)}
                     >
-                      <Icon name="trash" size={14} />
+                      <Icon name="trash" size={12} />
                     </Button>
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

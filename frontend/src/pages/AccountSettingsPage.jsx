@@ -48,7 +48,11 @@ export default function AccountSettingsPage() {
                 : "연결된 프로젝트가 없습니다"}
             </p>
             <div className={styles.actions}>
-              <Button type="button" variant="default" onClick={() => navigate("/connect")}>
+              <Button
+                type="button"
+                variant="default"
+                onClick={() => navigate("/connect", { state: { openGallery: true } })}
+              >
                 프로젝트 연결 관리
               </Button>
             </div>

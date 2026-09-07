@@ -9,7 +9,7 @@
 
 .layout {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 20px;
 }
 
@@ -26,10 +26,71 @@
   box-shadow: var(--shadow-md);
 }
 
-.listCard {
-  width: 320px;
-  max-height: calc(100vh - 48px);
-  overflow-y: auto;
+.formColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.galleryToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.galleryToggle:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.galleryToggleIcon {
+  transform: rotate(180deg);
+  transition: transform 0.15s ease;
+}
+
+.galleryToggle[aria-expanded="true"] .galleryToggleIcon {
+  transform: rotate(0deg);
+}
+
+.gallery {
+  width: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 0.22s ease;
+}
+
+.galleryOpen {
+  width: 380px;
+}
+
+.galleryInner {
+  width: 380px;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px 22px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.galleryHeader {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .listTitle {
@@ -39,46 +100,97 @@
   color: var(--color-text);
 }
 
+.gallerySearch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+}
+
+.gallerySearch input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12.5px;
+  color: var(--color-text);
+}
+
 .empty {
   margin: 0;
   font-size: 13px;
   color: var(--color-text-secondary);
 }
 
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.galleryGrid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: min-content;
+  gap: 10px;
+  align-content: start;
 }
 
-.listItem {
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tile:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.tileActive {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.tileMain {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.thumb {
+  width: 100%;
+  height: 56px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  justify-content: center;
 }
 
-.listItem.active {
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft);
+.thumbInitial {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  opacity: 0.92;
 }
 
-.listItemInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.listItemName {
-  font-size: 13px;
+.tileName {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px 0;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--color-text);
   overflow: hidden;
@@ -86,19 +198,22 @@
   white-space: nowrap;
 }
 
-.listItemMeta {
-  font-size: 11.5px;
-  color: var(--color-text-secondary);
+.tileMeta {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px 10px 8px;
+  font-size: 10.5px;
+  color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.listItemActions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+.tileDelete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .brand {
