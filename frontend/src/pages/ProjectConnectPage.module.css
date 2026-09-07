@@ -161,15 +161,12 @@
 }
 
 .tileMain {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  display: block;
   width: 100%;
   border: none;
   background: transparent;
   padding: 0;
   cursor: pointer;
-  text-align: left;
 }
 
 .thumb {
@@ -188,16 +185,27 @@
   opacity: 0.92;
 }
 
-.tileName {
+.tileNameRow {
+  display: flex;
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px 0;
+}
+
+.tileName {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.tileMetaBtn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
 }
 
 .tileMeta {

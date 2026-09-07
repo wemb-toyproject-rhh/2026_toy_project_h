@@ -10,7 +10,7 @@ import styles from "./HistoryListPage.module.css";
 const TYPE_LABELS = { css: "CSS", html: "HTML", js: "JAVASCRIPT" };
 
 export default function HistoryListPage() {
-  const { entries: allEntries, loading, error, reload, updateMetadata } = useHistory();
+  const { entries: allEntries, loading, error, reload, updateMetadata, hasProject } = useHistory();
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -349,7 +349,20 @@ export default function HistoryListPage() {
           </button>
         </div>
 
-        {error && (
+        {!loading && !hasProject && (
+          <div className={styles.stateMessage}>
+            <span>연결된 프로젝트가 없습니다. 먼저 프로젝트를 연결해 주세요.</span>
+            <button
+              type="button"
+              className={styles.stateRetry}
+              onClick={() => navigate("/connect")}
+            >
+              프로젝트 연결하기
+            </button>
+          </div>
+        )}
+
+        {hasProject && error && (
           <div className={styles.stateMessage}>
             <span>{error}</span>
             <button type="button" className={styles.stateRetry} onClick={reload}>
@@ -358,7 +371,7 @@ export default function HistoryListPage() {
           </div>
         )}
 
-        {!error && loading && allEntries.length === 0 && (
+        {hasProject && !error && loading && allEntries.length === 0 && (
           <p className={styles.stateMessage}>이력을 불러오는 중...</p>
         )}
 

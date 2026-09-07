@@ -5,6 +5,8 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { testConnection } from "../services/projectApi.js";
 import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
+import PasswordInput from "../components/common/PasswordInput.jsx";
+import EditableTitle from "../components/common/EditableTitle.jsx";
 import styles from "./ProjectConnectPage.module.css";
 
 const GALLERY_GRADIENTS = [
@@ -26,7 +28,7 @@ export default function ProjectConnectPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = useAuth();
-  const { projects, currentProject, loading, selectProject, addProject, deleteProject } =
+  const { projects, currentProject, loading, selectProject, addProject, renameProject, deleteProject } =
     useProjects();
 
   // 어디서 들어왔는지에 따라 갤러리 초기 상태를 명시적으로 지정할 수 있습니다
@@ -141,6 +143,14 @@ export default function ProjectConnectPage() {
     navigate("/");
   };
 
+  const handleRename = async (projectId, newName) => {
+    try {
+      await renameProject(projectId, newName);
+    } catch (err) {
+      setError(err.message || "프로젝트 이름 수정에 실패했습니다");
+    }
+  };
+
   const handleDelete = async (event, project) => {
     event.stopPropagation();
     if (!window.confirm(`"${project.name}" 연결을 끊으시겠어요?`)) return;
@@ -221,8 +231,7 @@ export default function ProjectConnectPage() {
             </label>
             <label className={`${styles.field} ${styles.grow}`}>
               <span className={styles.label}>비밀번호</span>
-              <input
-                type="password"
+              <PasswordInput
                 name="password"
                 className={styles.input}
                 placeholder="••••••••"
@@ -318,7 +327,19 @@ export default function ProjectConnectPage() {
                           {project.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
-                      <span className={styles.tileName}>{project.name}</span>
+                    </button>
+                    <div className={styles.tileNameRow}>
+                      <EditableTitle
+                        value={project.name}
+                        className={styles.tileName}
+                        onSave={(newName) => handleRename(project.id, newName)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.tileMetaBtn}
+                      onClick={() => handleSelect(project.id)}
+                    >
                       <span className={styles.tileMeta}>
                         {project.host}:{project.port}
                       </span>

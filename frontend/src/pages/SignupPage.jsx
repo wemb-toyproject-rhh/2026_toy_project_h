@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/common/Button.jsx";
+import PasswordInput from "../components/common/PasswordInput.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { register, login } from "../services/authApi.js";
 import styles from "./SignupPage.module.css";
@@ -73,8 +74,7 @@ export default function SignupPage() {
 
         <label className={styles.field}>
           <span className={styles.label}>비밀번호</span>
-          <input
-            type="password"
+          <PasswordInput
             className={styles.input}
             placeholder="••••••••"
             value={password}
@@ -86,8 +86,7 @@ export default function SignupPage() {
 
         <label className={styles.field}>
           <span className={styles.label}>비밀번호 확인</span>
-          <input
-            type="password"
+          <PasswordInput
             className={styles.input}
             placeholder="••••••••"
             value={passwordConfirm}
