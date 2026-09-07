@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS tb_user_rhh (
   user_id        VARCHAR(1000) PRIMARY KEY,
   password       VARCHAR(1000) NOT NULL,      -- bcrypt 해시. 평문 저장 금지.
   project_recent VARCHAR(1000),                -- 가장 최근 접속한 tb_project_list.project_id (soft reference, FK 없음)
-  use            BOOLEAN NOT NULL DEFAULT true -- false 면 로그인 차단
+  use            BOOLEAN NOT NULL DEFAULT true, -- false 면 로그인 차단
+  user_name      VARCHAR(100)                  -- 닉네임. 기존 계정엔 값이 없을 수 있어 NULL 허용
 );
 
 -- RHH 사용자가 등록한 프로젝트(= 연결한 RENOBIT DB 접속 정보) 목록.

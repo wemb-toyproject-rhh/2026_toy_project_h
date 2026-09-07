@@ -29,6 +29,9 @@ const METADATA_FIELD_MAX = 1000;
 const USER_ID_MAX = 1000;
 const PASSWORD_MIN = 4;
 
+// tb_user_rhh.user_name(닉네임)은 varchar(100) 입니다.
+const USER_NAME_MAX = 100;
+
 // tb_project_list 의 문자열 컬럼도 전부 varchar(1000) 입니다.
 const PROJECT_FIELD_MAX = 1000;
 
@@ -264,7 +267,7 @@ app.post("/api/rhh/login", async (req, res) => {
 
   try {
     const result = await query(
-      `SELECT user_id, password, project_recent, use FROM tb_user_rhh WHERE user_id = $1`,
+      `SELECT user_id, password, project_recent, use, user_name FROM tb_user_rhh WHERE user_id = $1`,
       [userId],
     );
     const row = result.rows[0];
@@ -284,10 +287,43 @@ app.post("/api/rhh/login", async (req, res) => {
     }
 
     const token = issueToken(row.user_id);
-    res.json({ token, userId: row.user_id, projectRecent: row.project_recent });
+    res.json({
+      token,
+      userId: row.user_id,
+      projectRecent: row.project_recent,
+      userName: row.user_name,
+    });
   } catch (err) {
     console.error("[POST /api/rhh/login]", err.message);
     res.status(500).json({ error: "로그인 실패", detail: err.message });
+  }
+});
+
+// [계정정보 수정 화면] 닉네임(user_name) 변경. 빈 문자열을 보내면 닉네임을 지웁니다
+// (NULL로 저장 — user_name 은 필수 항목이 아니라서요).
+app.put("/api/rhh/users/me/nickname", requireAuth, async (req, res) => {
+  const { userName } = req.body ?? {};
+
+  if (typeof userName !== "string") {
+    return res.status(400).json({ error: "userName 을 입력해 주세요" });
+  }
+  const trimmed = userName.trim();
+  if (trimmed.length > USER_NAME_MAX) {
+    return res.status(400).json({ error: `닉네임은 ${USER_NAME_MAX}자를 넘을 수 없습니다` });
+  }
+
+  try {
+    const result = await query(
+      `UPDATE tb_user_rhh SET user_name = $1 WHERE user_id = $2 RETURNING user_name`,
+      [trimmed || null, req.userId],
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "계정을 찾을 수 없습니다" });
+    }
+    res.json({ userName: result.rows[0].user_name });
+  } catch (err) {
+    console.error("[PUT /api/rhh/users/me/nickname]", err.message);
+    res.status(500).json({ error: "닉네임 변경 실패", detail: err.message });
   }
 });
 
