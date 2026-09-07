@@ -127,14 +127,19 @@ app.put("/api/history/:id/metadata", async (req, res) => {
 
   const assignments = [];
   const values = [];
-  for (const [field, value] of [
+  for (const [field, rawValue] of [
     ["title", title],
     ["comment", comment],
   ]) {
-    if (value === undefined) continue;
-    if (typeof value !== "string") {
+    if (rawValue === undefined) continue;
+    if (typeof rawValue !== "string") {
       return res.status(400).json({ error: `${field} 은 문자열이어야 합니다` });
     }
+    // 화면은 title을 "#3 제목"처럼 순번을 붙여서 보여주는데(entries.js 참고), 그
+    // 상태 그대로 이어서 수정하는 경우가 있어서 "#숫자" 표시용 접두사가 실제
+    // 저장값에 섞여 들어올 수 있습니다. 저장 전에 그 접두사만 떼어내고 실제로
+    // 입력한 제목만 남깁니다. (comment는 이 접두사가 안 붙으므로 그대로 둡니다.)
+    const value = field === "title" ? rawValue.replace(/^#\d+\s*/, "") : rawValue;
     if (value.length > METADATA_FIELD_MAX) {
       return res
         .status(400)
