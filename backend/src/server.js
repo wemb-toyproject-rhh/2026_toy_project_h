@@ -1,22 +1,21 @@
 // Entry point for the RHH backend API server.
 // CLAUDE.md 의 "Backend Integration API Protocol" 계약을 그대로 구현합니다:
-//   GET  /api/history
-//   GET  /api/history/:id
-//   PUT  /api/history/:id/metadata
-//   GET  /api/history/compare?v1={id1}&v2={id2}
+//   GET  /api/history?projectId=
+//   GET  /api/history/:id?projectId=
+//   PUT  /api/history/:id/metadata?projectId=
+//   GET  /api/history/compare?v1={id1}&v2={id2}&projectId=
 // RHH 자체 사용자/프로젝트 관리는 같은 규칙으로 /api/rhh/... 아래에 둡니다.
 //
-// /api/history* 는 RHH 자체 DB(db.js 의 고정 풀)에서 조회합니다 — 로그인/프로젝트
-// 선택과는 무관하게 항상 접근 가능합니다. (한때 로그인한 사용자의 프로젝트가 가리키는
-// 대상 DB로 동적 라우팅하도록 만들었던 적이 있는데, 이력 화면은 로그인 없이 예전처럼
-// 바로 보이는 쪽으로 되돌렸습니다. 그 동적 연결 인프라 자체(projectPool.js 의
-// getProjectPool/testConnection)는 프로젝트 등록 화면의 "연결 테스트"에 계속 쓰입니다.)
+// /api/history* 는 로그인(Authorization: Bearer) + 내 프로젝트인지 확인된 projectId 가
+// 있어야만 호출할 수 있고, tb_page_hist/tb_instance_hist 조회는 그 프로젝트가 가리키는
+// 대상 DB(projectPool.js 가 관리하는 풀)로 라우팅됩니다 — RHH 자체 DB(db.js)와는 별개입니다.
+// (전체 이력 보기 화면에서 프로젝트를 바꾸면 그 DB의 이력이 보이도록 하기 위함입니다.)
 import "dotenv/config";
 import express from "express";
 import { query } from "./db.js";
 import { getAllEntries, getEntryById } from "./entries.js";
 import { hashPassword, verifyPassword, issueToken, requireAuth } from "./auth.js";
-import { testConnection } from "./projectPool.js";
+import { getProjectPool, testConnection } from "./projectPool.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -47,6 +46,29 @@ function toProjectDto(row) {
   };
 }
 
+// /api/history* 는 "어느 프로젝트(대상 DB)" 이력인지 알아야 하므로 ?projectId= 를
+// 필수로 받습니다. 내(req.userId) 프로젝트가 맞는지 여기서 먼저 확인하고, 맞으면 그
+// 프로젝트 row(host/port/db_name/account/password)를 그대로 돌려줍니다 — 라우트는 이
+// row 를 getProjectPool 에 넘겨서 대상 DB 커넥션 풀을 얻습니다.
+// 실패 시 이 함수가 직접 응답을 보내고 null 을 돌려주므로, 호출부는 null 이면 바로 return 합니다.
+async function resolveOwnedProject(req, res) {
+  const { projectId } = req.query;
+  if (typeof projectId !== "string" || !projectId.trim()) {
+    res.status(400).json({ error: "projectId 쿼리 파라미터가 필요합니다" });
+    return null;
+  }
+
+  const result = await query(
+    `SELECT * FROM tb_project_list WHERE project_id = $1 AND user_id = $2 AND use = true`,
+    [projectId, req.userId],
+  );
+  if (result.rowCount === 0) {
+    res.status(404).json({ error: "프로젝트를 찾을 수 없습니다" });
+    return null;
+  }
+  return result.rows[0];
+}
+
 // id 는 "page-39" / "inst-101" 형태입니다.
 function parseId(id) {
   const at = id.indexOf("-");
@@ -60,11 +82,16 @@ function parseId(id) {
 }
 
 // 이력 목록. 페이지/컴포넌트 필터링은 프론트가 entry.targetId 기준으로 처리합니다.
-// [전체 이력 보기 화면]이 처음 열릴 때 한 번 호출합니다. 이력 상세/Diff 화면은 이때
-// 받은 목록을 그대로 재사용해서 별도로 다시 호출하지 않습니다(아래 두 API 참고).
-app.get("/api/history", async (req, res) => {
+// [전체 이력 보기 화면]이 처음 열릴 때(그리고 프로젝트를 바꿀 때마다) 호출합니다.
+// ?projectId= 로 지정한 프로젝트(=대상 RENOBIT DB)에서 조회합니다. 이력 상세/Diff
+// 화면은 이때 받은 목록을 그대로 재사용해서 별도로 다시 호출하지 않습니다.
+app.get("/api/history", requireAuth, async (req, res) => {
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
   try {
-    const entries = await getAllEntries();
+    const pool = getProjectPool(project);
+    const entries = await getAllEntries({ query: (text, params) => pool.query(text, params) });
     res.json(entries);
   } catch (err) {
     console.error("[GET /api/history]", err.message);
@@ -76,14 +103,22 @@ app.get("/api/history", async (req, res) => {
 // [Diff(버전 비교) 화면]용으로 만들어뒀지만, 그 화면은 실제로는 위 GET /api/history 로
 // 이미 받아온 목록에서 클라이언트가 두 항목을 골라 비교하는 방식이라 지금은 호출되지
 // 않는 API입니다(미사용).
-app.get("/api/history/compare", async (req, res) => {
+app.get("/api/history/compare", requireAuth, async (req, res) => {
   const { v1, v2 } = req.query;
   if (!v1 || !v2) {
     return res.status(400).json({ error: "v1, v2 쿼리 파라미터가 모두 필요합니다" });
   }
 
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
   try {
-    const [entryV1, entryV2] = await Promise.all([getEntryById(v1), getEntryById(v2)]);
+    const pool = getProjectPool(project);
+    const runQuery = (text, params) => pool.query(text, params);
+    const [entryV1, entryV2] = await Promise.all([
+      getEntryById(v1, { query: runQuery }),
+      getEntryById(v2, { query: runQuery }),
+    ]);
     if (!entryV1 || !entryV2) {
       return res.status(404).json({ error: "비교할 이력을 찾을 수 없습니다" });
     }
@@ -96,9 +131,13 @@ app.get("/api/history/compare", async (req, res) => {
 
 // 이력 단건 조회. [이력 상세 화면]용으로 만들어뒀지만, 그 화면도 위 GET /api/history
 // 로 이미 받아온 목록에서 id로 찾아 쓰는 방식이라 지금은 호출되지 않는 API입니다(미사용).
-app.get("/api/history/:id", async (req, res) => {
+app.get("/api/history/:id", requireAuth, async (req, res) => {
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
   try {
-    const entry = await getEntryById(req.params.id);
+    const pool = getProjectPool(project);
+    const entry = await getEntryById(req.params.id, { query: (text, params) => pool.query(text, params) });
     if (!entry) {
       return res.status(404).json({ error: `이력을 찾을 수 없습니다 (id=${req.params.id})` });
     }
@@ -114,27 +153,35 @@ app.get("/api/history/:id", async (req, res) => {
 //   - 이력 상세 화면은 title / comment 를 각각 따로 보냄
 //   - "숨기기" 버튼은 hidden 만 보냄 (실제 데이터는 삭제하지 않고 이 플래그만 바꿈)
 // hist_id 가 두 테이블 모두 기본키라 정확히 한 행만 바뀝니다.
-app.put("/api/history/:id/metadata", async (req, res) => {
+app.put("/api/history/:id/metadata", requireAuth, async (req, res) => {
   const parsed = parseId(req.params.id);
   const { title, comment, hidden } = req.body ?? {};
 
   if (!parsed) {
     return res.status(400).json({ error: "id 형식이 올바르지 않습니다 (예: page-39)" });
   }
+
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
   if (title === undefined && comment === undefined && hidden === undefined) {
     return res.status(400).json({ error: "title, comment, hidden 중 하나는 있어야 합니다" });
   }
 
   const assignments = [];
   const values = [];
-  for (const [field, value] of [
+  for (const [field, rawValue] of [
     ["title", title],
     ["comment", comment],
   ]) {
-    if (value === undefined) continue;
-    if (typeof value !== "string") {
+    if (rawValue === undefined) continue;
+    if (typeof rawValue !== "string") {
       return res.status(400).json({ error: `${field} 은 문자열이어야 합니다` });
     }
+    // 화면은 title을 "#3 제목"처럼 순번을 붙여서 보여주는데(entries.js 참고), 그
+    // 상태 그대로 이어서 수정하는 경우가 있어서 "#숫자" 표시용 접두사가 실제
+    // 저장값에 섞여 들어올 수 있습니다. 저장 전에 그 접두사만 떼어내고 실제로
+    // 입력한 제목만 남깁니다. (comment는 이 접두사가 안 붙으므로 그대로 둡니다.)
+    const value = field === "title" ? rawValue.replace(/^#\d+\s*/, "") : rawValue;
     if (value.length > METADATA_FIELD_MAX) {
       return res
         .status(400)
@@ -153,7 +200,9 @@ app.put("/api/history/:id/metadata", async (req, res) => {
   values.push(parsed.histId);
 
   try {
-    const result = await query(
+    const pool = getProjectPool(project);
+    const runQuery = (text, params) => pool.query(text, params);
+    const result = await runQuery(
       `UPDATE ${parsed.table} SET ${assignments.join(", ")} WHERE hist_id = $${values.length} RETURNING hist_id`,
       values,
     );
@@ -161,7 +210,7 @@ app.put("/api/history/:id/metadata", async (req, res) => {
       return res.status(404).json({ error: `이력을 찾을 수 없습니다 (id=${req.params.id})` });
     }
 
-    const entry = await getEntryById(req.params.id);
+    const entry = await getEntryById(req.params.id, { query: runQuery });
     res.json(entry);
   } catch (err) {
     console.error("[PUT /api/history/:id/metadata]", err.message);
