@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import ProjectSwitcher from "./ProjectSwitcher.jsx";
+import Icon from "./Icon.jsx";
 import styles from "./Header.module.css";
 
 export default function Header() {
@@ -21,7 +22,12 @@ export default function Header() {
         <ProjectSwitcher />
       </div>
       <div className={styles.actionCol}>
-        <span className={styles.user}>kim.dev</span>
+        <div className={styles.userGroup}>
+          <span className={styles.user}>kim.dev</span>
+          <Link to="/account" className={styles.settingsBtn} aria-label="계정 설정" title="계정 설정">
+            <Icon name="settings" size={15} />
+          </Link>
+        </div>
         <Link to="/login" className={styles.logout}>
           로그아웃
         </Link>
