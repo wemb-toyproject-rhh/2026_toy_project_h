@@ -472,6 +472,38 @@ app.post("/api/rhh/projects", requireAuth, async (req, res) => {
   }
 });
 
+// 프로젝트 이름 수정. host/port/계정/비밀번호 등 접속 정보는 안 건드리고 project_name
+// 하나만 바꿉니다 (접속 정보 수정 화면은 따로 없음 — 삭제 후 재등록 방식으로 가기로
+// 정했던 부분이라, 이름만 바꾸는 용도로 범위를 좁혔습니다). 여기도 "내 프로젝트"일
+// 때만 바뀌도록 user_id 를 조건에 같이 겁니다.
+app.put("/api/rhh/projects/:projectId/name", requireAuth, async (req, res) => {
+  const { projectId } = req.params;
+  const { projectName } = req.body ?? {};
+
+  if (typeof projectName !== "string" || !projectName.trim()) {
+    return res.status(400).json({ error: "projectName 을 입력해 주세요" });
+  }
+  if (projectName.length > PROJECT_FIELD_MAX) {
+    return res.status(400).json({ error: `projectName 은 ${PROJECT_FIELD_MAX}자를 넘을 수 없습니다` });
+  }
+
+  try {
+    const result = await query(
+      `UPDATE tb_project_list SET project_name = $1, updated_at = now()
+       WHERE project_id = $2 AND user_id = $3 AND use = true
+       RETURNING *`,
+      [projectName, projectId, req.userId],
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "프로젝트를 찾을 수 없습니다" });
+    }
+    res.json(toProjectDto(result.rows[0]));
+  } catch (err) {
+    console.error("[PUT /api/rhh/projects/:projectId/name]", err.message);
+    res.status(500).json({ error: "프로젝트 이름 수정 실패", detail: err.message });
+  }
+});
+
 // 프로젝트 삭제. 실제로 지우지 않고 use=false 로만 바꿉니다(요구사항).
 // 여기도 "내 프로젝트"일 때만 지워지도록 user_id 를 조건에 같이 겁니다.
 // [프로젝트 연결 화면]의 프로젝트별 삭제(휴지통 아이콘) 버튼에서 호출합니다.
