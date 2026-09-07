@@ -131,11 +131,15 @@
 }
 
 .logout {
+  font: inherit;
   font-size: 13px;
   color: var(--color-text-secondary);
   text-decoration: none;
   padding: 6px 10px;
+  border: none;
   border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
 }
 
 .logout:hover {
