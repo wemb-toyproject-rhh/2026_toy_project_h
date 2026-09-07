@@ -334,63 +334,6 @@ app.post("/api/rhh/projects", requireAuth, async (req, res) => {
   }
 });
 
-// 프로젝트 수정. 넘긴 필드만 갱신하며(기존 /metadata 와 같은 방식), 반드시
-// "내(req.userId) 프로젝트"일 때만 수정됩니다 — 다른 사람 프로젝트는 조건절에서 안 걸립니다.
-app.put("/api/rhh/projects/:projectId", requireAuth, async (req, res) => {
-  const { projectId } = req.params;
-  const { projectName, host, port, dbName, account, password } = req.body ?? {};
-
-  const assignments = [];
-  const values = [];
-  for (const [column, value] of [
-    ["project_name", projectName],
-    ["host", host],
-    ["db_name", dbName],
-    ["account", account],
-    ["password", password],
-  ]) {
-    if (value === undefined) continue;
-    if (typeof value !== "string" || !value.trim()) {
-      return res.status(400).json({ error: `${column} 은(는) 빈 값일 수 없습니다` });
-    }
-    if (value.length > PROJECT_FIELD_MAX) {
-      return res.status(400).json({ error: `${column} 은(는) ${PROJECT_FIELD_MAX}자를 넘을 수 없습니다` });
-    }
-    values.push(value);
-    assignments.push(`${column} = $${values.length}`);
-  }
-  if (port !== undefined) {
-    const portNum = Number(port);
-    if (!Number.isInteger(portNum) || portNum <= 0 || portNum > 65535) {
-      return res.status(400).json({ error: "port 는 1~65535 사이의 숫자여야 합니다" });
-    }
-    values.push(portNum);
-    assignments.push(`port = $${values.length}`);
-  }
-  if (assignments.length === 0) {
-    return res.status(400).json({ error: "수정할 값이 없습니다" });
-  }
-  assignments.push("updated_at = now()");
-
-  values.push(projectId, req.userId);
-
-  try {
-    const result = await query(
-      `UPDATE tb_project_list SET ${assignments.join(", ")}
-       WHERE project_id = $${values.length - 1} AND user_id = $${values.length} AND use = true
-       RETURNING *`,
-      values,
-    );
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "프로젝트를 찾을 수 없습니다" });
-    }
-    res.json(toProjectDto(result.rows[0]));
-  } catch (err) {
-    console.error("[PUT /api/rhh/projects/:projectId]", err.message);
-    res.status(500).json({ error: "프로젝트 수정 실패", detail: err.message });
-  }
-});
-
 // 프로젝트 삭제. 실제로 지우지 않고 use=false 로만 바꿉니다(요구사항).
 // 여기도 "내 프로젝트"일 때만 지워지도록 user_id 를 조건에 같이 겁니다.
 app.delete("/api/rhh/projects/:projectId", requireAuth, async (req, res) => {
