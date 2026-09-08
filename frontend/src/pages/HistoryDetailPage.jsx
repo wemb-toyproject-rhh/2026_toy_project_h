@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   filterEntriesByTarget,
@@ -7,6 +7,7 @@ import {
   getTabContent,
 } from "../services/historyAdapter.js";
 import { useHistory } from "../context/HistoryContext.jsx";
+import { useProjects } from "../context/ProjectContext.jsx";
 import { computeDiff } from "../utils/diff.js";
 import Badge from "../components/common/Badge.jsx";
 import BackLink from "../components/common/BackLink.jsx";
@@ -23,7 +24,22 @@ export default function HistoryDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { entries, loading, error, reload, updateMetadata } = useHistory();
+  const { currentProject } = useProjects();
   const entry = getEntryById(entries, id);
+
+  // 이력 id는 프로젝트(대상 DB)별로 매겨지는 값이라, 이 화면을 보다가 다른
+  // 프로젝트로 바꾸면 지금 id는 새 프로젝트에서 의미가 없어집니다(운 나쁘면
+  // 우연히 같은 id의 완전히 다른 이력이 보일 수도 있음) — 진짜 전환이면
+  // 이력전체보기로 보냅니다. 최초 로딩 시의 undefined → 실제 id 전환은 제외합니다.
+  const lastProjectIdRef = useRef(undefined);
+  useEffect(() => {
+    const projectId = currentProject?.id;
+    if (projectId === undefined) return;
+    if (lastProjectIdRef.current !== undefined && lastProjectIdRef.current !== projectId) {
+      navigate("/");
+    }
+    lastProjectIdRef.current = projectId;
+  }, [currentProject?.id, navigate]);
 
   // 같은 타겟(페이지/컴포넌트)의 다른 버전들 사이를, 리스트로 돌아가지 않고 바로
   // 오갈 수 있게 저장 시각 순으로 정렬해둡니다.
