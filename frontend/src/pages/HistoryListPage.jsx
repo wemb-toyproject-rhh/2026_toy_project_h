@@ -119,8 +119,14 @@ export default function HistoryListPage() {
   }, [currentProject?.id]);
 
   const targetId = searchParams.get("target");
+  // 사이드바에는 자기 이력이 하나도 없는 페이지 노드(컴포넌트만 저장된 경우 pageTargetName으로
+  // 만들어진 가상 노드)도 있을 수 있습니다 — 그런 페이지를 선택하면 targetId와 같은 targetId를
+  // 가진 entry가 아예 없어서 아래 fallback(자식 entry의 pageTargetName)으로 라벨을 구합니다.
   const activeTargetLabel = targetId
     ? allEntries.find(entry => entry.targetId === targetId)?.targetLabel
+      ?? (allEntries.find(entry => entry.pageTargetId === targetId)?.pageTargetName
+        ? `[Page] ${allEntries.find(entry => entry.pageTargetId === targetId)?.pageTargetName}`
+        : null)
     : null;
 
   const sortOrder = searchParams.get("sort") === "asc" ? "asc" : "desc";
@@ -219,6 +225,9 @@ export default function HistoryListPage() {
   const typeFilterLabel = activeTypes.map(type => TYPE_LABELS[type]).join(", ");
   const clearDateFilter = () => updateParams({ from: null, to: null });
   const clearTypeFilter = () => updateParams({ types: null });
+  const hasAnyFilter = Boolean(targetId) || hasDateFilter || hasTypeFilter || Boolean(searchQuery.trim());
+  const clearAllFilters = () =>
+    updateParams({ target: null, q: null, from: null, to: null, types: null });
   const toggleTypeFilter = type => {
     const next = activeTypes.includes(type)
       ? activeTypes.filter(t => t !== type)
@@ -488,6 +497,21 @@ export default function HistoryListPage() {
 
         {hasProject && !error && loading && (
           <p className={styles.stateMessage}>이력을 불러오는 중...</p>
+        )}
+
+        {hasProject && !error && !loading && entries.length === 0 && (
+          <div className={styles.stateMessage}>
+            {hasAnyFilter ? (
+              <>
+                <span>조건에 맞는 이력이 없습니다.</span>
+                <button type="button" className={styles.stateRetry} onClick={clearAllFilters}>
+                  필터 초기화
+                </button>
+              </>
+            ) : (
+              <span>아직 저장된 이력이 없습니다.</span>
+            )}
+          </div>
         )}
 
         <div className={styles.list} ref={listRef}>
