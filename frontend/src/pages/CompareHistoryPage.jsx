@@ -55,7 +55,9 @@ export default function CompareHistoryPage() {
   useEffect(() => {
     if (!olderVersion || activePrimaryId) return;
     setActivePrimaryId(
-      olderVersion.primaryTabs.find((tab) => tab.hasSubTabs)?.id ?? olderVersion.primaryTabs[0]?.id,
+      olderVersion.primaryTabs.find((tab) => tab.modified)?.id
+        ?? olderVersion.primaryTabs.find((tab) => tab.hasSubTabs)?.id
+        ?? olderVersion.primaryTabs[0]?.id,
     );
     setActiveSubId(olderVersion.lifecycles.find((lc) => lc.modified)?.id ?? olderVersion.lifecycles[0]?.id);
   }, [olderVersion, activePrimaryId]);

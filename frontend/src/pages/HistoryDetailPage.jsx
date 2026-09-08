@@ -26,7 +26,11 @@ export default function HistoryDetailPage() {
   // is picked once here rather than as a useState initializer.
   useEffect(() => {
     if (!entry || activePrimaryId) return;
-    setActivePrimaryId(entry.primaryTabs.find((tab) => tab.hasSubTabs)?.id ?? entry.primaryTabs[0]?.id);
+    setActivePrimaryId(
+      entry.primaryTabs.find((tab) => tab.modified)?.id
+        ?? entry.primaryTabs.find((tab) => tab.hasSubTabs)?.id
+        ?? entry.primaryTabs[0]?.id,
+    );
     setActiveSubId(entry.lifecycles.find((lc) => lc.modified)?.id ?? entry.lifecycles[0]?.id);
   }, [entry, activePrimaryId]);
 
