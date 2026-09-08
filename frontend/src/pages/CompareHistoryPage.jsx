@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { filterEntriesByTarget, getEntryById, getTabContent } from "../services/historyAdapter.js";
 import { useHistory } from "../context/HistoryContext.jsx";
+import { useProjects } from "../context/ProjectContext.jsx";
 import { computeDiff } from "../utils/diff.js";
 import Badge from "../components/common/Badge.jsx";
 import BackLink from "../components/common/BackLink.jsx";
@@ -17,7 +18,24 @@ function formatVersionMeta(entry) {
 
 export default function CompareHistoryPage() {
   const { state } = useLocation();
+  const navigate = useNavigate();
   const { entries, loading, error, reload } = useHistory();
+  const { currentProject } = useProjects();
+
+  // 이력 id는 프로젝트(대상 DB)별로 매겨지는 값이라, 이 화면을 보다가 다른
+  // 프로젝트로 바꾸면 지금 비교 중인 id들이 새 프로젝트에서 의미가 없어집니다 —
+  // 진짜 전환이면 이력전체보기로 보냅니다. 최초 로딩 시의 undefined → 실제 id
+  // 전환은 제외합니다.
+  const lastProjectIdRef = useRef(undefined);
+  useEffect(() => {
+    const projectId = currentProject?.id;
+    if (projectId === undefined) return;
+    if (lastProjectIdRef.current !== undefined && lastProjectIdRef.current !== projectId) {
+      navigate("/");
+    }
+    lastProjectIdRef.current = projectId;
+  }, [currentProject?.id, navigate]);
+
   const [idA, setIdA] = useState(state?.ids?.[0] ?? null);
   const [idB, setIdB] = useState(state?.ids?.[1] ?? null);
   const entryA = getEntryById(entries, idA);
@@ -55,7 +73,9 @@ export default function CompareHistoryPage() {
   useEffect(() => {
     if (!olderVersion || activePrimaryId) return;
     setActivePrimaryId(
-      olderVersion.primaryTabs.find((tab) => tab.hasSubTabs)?.id ?? olderVersion.primaryTabs[0]?.id,
+      olderVersion.primaryTabs.find((tab) => tab.modified)?.id
+        ?? olderVersion.primaryTabs.find((tab) => tab.hasSubTabs)?.id
+        ?? olderVersion.primaryTabs[0]?.id,
     );
     setActiveSubId(olderVersion.lifecycles.find((lc) => lc.modified)?.id ?? olderVersion.lifecycles[0]?.id);
   }, [olderVersion, activePrimaryId]);

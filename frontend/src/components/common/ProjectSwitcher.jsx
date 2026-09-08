@@ -61,34 +61,36 @@ export default function ProjectSwitcher() {
 
       {open && (
         <div className={styles.panel}>
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              className={`${styles.optionRow} ${project.id === currentProject?.id ? styles.active : ""}`}
-            >
-              <button
-                type="button"
-                className={`${styles.option} ${project.id === currentProject?.id ? styles.active : ""}`}
-                onClick={() => {
-                  selectProject(project.id);
-                  setOpen(false);
-                }}
+          <div className={styles.optionList}>
+            {projects.map((project) => (
+              <div
+                key={project.id}
+                className={`${styles.optionRow} ${project.id === currentProject?.id ? styles.active : ""}`}
               >
-                <span className={styles.optionName}>{project.name}</span>
-                <span className={styles.optionMeta}>
-                  {project.host}:{project.port} · {project.dbname}
-                </span>
-              </button>
-              <button
-                type="button"
-                className={styles.disconnectBtn}
-                disabled={deletingId === project.id}
-                onClick={() => handleDisconnect(project)}
-              >
-                {deletingId === project.id ? "끊는 중..." : "연결 끊기"}
-              </button>
-            </div>
-          ))}
+                <button
+                  type="button"
+                  className={`${styles.option} ${project.id === currentProject?.id ? styles.active : ""}`}
+                  onClick={() => {
+                    selectProject(project.id);
+                    setOpen(false);
+                  }}
+                >
+                  <span className={styles.optionName}>{project.name}</span>
+                  <span className={styles.optionMeta}>
+                    {project.host}:{project.port} · {project.dbname}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.disconnectBtn}
+                  disabled={deletingId === project.id}
+                  onClick={() => handleDisconnect(project)}
+                >
+                  {deletingId === project.id ? "끊는 중..." : "연결 끊기"}
+                </button>
+              </div>
+            ))}
+          </div>
 
           <div className={styles.divider} />
 

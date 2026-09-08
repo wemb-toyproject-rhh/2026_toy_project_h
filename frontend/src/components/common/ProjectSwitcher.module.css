@@ -48,11 +48,19 @@
   z-index: 30;
   min-width: 260px;
   max-width: 340px;
+  max-height: min(60vh, 420px);
+  display: flex;
+  flex-direction: column;
   padding: 6px;
   background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
+}
+
+.optionList {
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .optionRow {
@@ -138,12 +146,14 @@
 }
 
 .divider {
+  flex-shrink: 0;
   height: 1px;
   background: var(--color-border);
   margin: 6px 4px;
 }
 
 .addOption {
+  flex-shrink: 0;
   display: block;
   width: 100%;
   padding: 7px 10px;
