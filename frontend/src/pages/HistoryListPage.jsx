@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { filterEntriesByTarget } from "../services/historyAdapter.js";
 import { useHistory } from "../context/HistoryContext.jsx";
+import { useProjects } from "../context/ProjectContext.jsx";
 import PRCard from "../components/history/PRCard.jsx";
 import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
@@ -9,9 +10,11 @@ import styles from "./HistoryListPage.module.css";
 
 const TYPE_LABELS = { css: "CSS", html: "HTML", js: "JAVASCRIPT" };
 const PAGE_SIZE = 24;
+const UNDO_GRACE_MS = 4000;
 
 export default function HistoryListPage() {
   const { entries: allEntries, loading, error, reload, updateMetadata, hasProject } = useHistory();
+  const { currentProject } = useProjects();
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -30,6 +33,26 @@ export default function HistoryListPage() {
       return next;
     });
   };
+
+  // 프로젝트를 바꾸면 이전 프로젝트에서 체크해둔 선택/필터/정렬을 이어가면 안 됩니다 —
+  // 이력 id가 프로젝트(DB)별로 매겨져서 다른 프로젝트에 우연히 같은 id가 있으면 엉뚱한
+  // 카드가 선택된 것처럼 보이거나, 존재하지 않는 타겟으로 필터링된 채 남을 수 있습니다.
+  // lastProjectIdRef로 "진짜 전환"(A → B)만 골라내고, 최초 로딩 시의 undefined → 실제
+  // id 전환(딥링크로 들어온 필터/정렬 값이 있을 수 있음)은 초기화하지 않습니다.
+  const lastProjectIdRef = useRef(undefined);
+  useEffect(() => {
+    const id = currentProject?.id;
+    if (id === undefined) return;
+    if (lastProjectIdRef.current !== undefined && lastProjectIdRef.current !== id) {
+      setSelectedIds([]);
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        ["target", "q", "from", "to", "types", "sort"].forEach(key => next.delete(key));
+        return next;
+      });
+    }
+    lastProjectIdRef.current = id;
+  }, [currentProject?.id, setSearchParams]);
 
   useEffect(() => {
     if (!filterOpen) return undefined;
@@ -53,15 +76,57 @@ export default function HistoryListPage() {
     updateMetadata(id, { title: newTitle });
   };
 
-  // 실제 데이터는 지우지 않고 hidden 플래그만 세워서, 이 이력이 "전체 이력
-  // 보기"에서만 안 보이게 합니다 (HistoryContext.updateMetadata 가 로컬 목록에서도 같이 걷어냄).
-  const handleHide = (id) => {
-    updateMetadata(id, { hidden: true });
+  // "이력 삭제" 버튼 = 실제로는 hidden 플래그만 세우는 소프트 삭제입니다. 클릭 즉시
+  // API를 호출하지 않고, 화면에서만 먼저 숨긴 뒤(pendingHideIds) 잠시(UNDO_GRACE_MS)
+  // 기다렸다가 실제로 저장합니다 — 그사이 "실행 취소"를 누르면 API 호출 자체가 안
+  // 일어납니다. 우다다 여러 개를 연달아 지워도 타이머가 매번 리셋되면서 하나의
+  // 토스트/실행 취소로 묶입니다.
+  const [pendingHideIds, setPendingHideIds] = useState([]);
+  const pendingHideIdsRef = useRef(pendingHideIds);
+  pendingHideIdsRef.current = pendingHideIds;
+  const pendingHideTimerRef = useRef(null);
+
+  const flushPendingHides = () => {
+    if (pendingHideTimerRef.current) {
+      clearTimeout(pendingHideTimerRef.current);
+      pendingHideTimerRef.current = null;
+    }
+    const ids = pendingHideIdsRef.current;
+    if (ids.length === 0) return;
+    setPendingHideIds([]);
+    ids.forEach((id) => updateMetadata(id, { hidden: true }));
   };
 
+  const handleHide = (id) => {
+    setPendingHideIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    if (pendingHideTimerRef.current) clearTimeout(pendingHideTimerRef.current);
+    pendingHideTimerRef.current = setTimeout(flushPendingHides, UNDO_GRACE_MS);
+  };
+
+  const handleUndoHide = () => {
+    if (pendingHideTimerRef.current) {
+      clearTimeout(pendingHideTimerRef.current);
+      pendingHideTimerRef.current = null;
+    }
+    setPendingHideIds([]);
+  };
+
+  // 프로젝트가 바뀌거나 이 페이지를 벗어나면(상세 화면 이동 등) 유예 시간을 더 기다리지
+  // 않고 즉시 확정 저장합니다 — 그냥 버려두면 "삭제했다고 생각했는데 안 지워짐" 상태가 됩니다.
+  useEffect(() => {
+    return () => flushPendingHides();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProject?.id]);
+
   const targetId = searchParams.get("target");
+  // 사이드바에는 자기 이력이 하나도 없는 페이지 노드(컴포넌트만 저장된 경우 pageTargetName으로
+  // 만들어진 가상 노드)도 있을 수 있습니다 — 그런 페이지를 선택하면 targetId와 같은 targetId를
+  // 가진 entry가 아예 없어서 아래 fallback(자식 entry의 pageTargetName)으로 라벨을 구합니다.
   const activeTargetLabel = targetId
     ? allEntries.find(entry => entry.targetId === targetId)?.targetLabel
+      ?? (allEntries.find(entry => entry.pageTargetId === targetId)?.pageTargetName
+        ? `[Page] ${allEntries.find(entry => entry.pageTargetId === targetId)?.pageTargetName}`
+        : null)
     : null;
 
   const sortOrder = searchParams.get("sort") === "asc" ? "asc" : "desc";
@@ -82,7 +147,11 @@ export default function HistoryListPage() {
   };
 
   const entries = useMemo(() => {
-    let list = filterEntriesByTarget(allEntries, targetId);
+    let list =
+      pendingHideIds.length > 0
+        ? allEntries.filter(entry => !pendingHideIds.includes(entry.id))
+        : allEntries;
+    list = filterEntriesByTarget(list, targetId);
 
     const query = searchQuery.trim().toLowerCase();
     if (query) {
@@ -113,7 +182,7 @@ export default function HistoryListPage() {
       const diff = new Date(a.savedAtRaw) - new Date(b.savedAtRaw);
       return sortOrder === "asc" ? diff : -diff;
     });
-  }, [allEntries, targetId, searchQuery, dateFrom, dateTo, sortOrder, activeTypes]);
+  }, [allEntries, pendingHideIds, targetId, searchQuery, dateFrom, dateTo, sortOrder, activeTypes]);
 
   // 무한 스크롤: 필터링/정렬된 결과가 아무리 많아도 한 번에 PAGE_SIZE개만 렌더링하고,
   // 목록 아래쪽 sentinel이 보이면 더 불러옵니다. entries 자체가 바뀌면(필터/정렬/재조회)
@@ -156,6 +225,9 @@ export default function HistoryListPage() {
   const typeFilterLabel = activeTypes.map(type => TYPE_LABELS[type]).join(", ");
   const clearDateFilter = () => updateParams({ from: null, to: null });
   const clearTypeFilter = () => updateParams({ types: null });
+  const hasAnyFilter = Boolean(targetId) || hasDateFilter || hasTypeFilter || Boolean(searchQuery.trim());
+  const clearAllFilters = () =>
+    updateParams({ target: null, q: null, from: null, to: null, types: null });
   const toggleTypeFilter = type => {
     const next = activeTypes.includes(type)
       ? activeTypes.filter(t => t !== type)
@@ -364,6 +436,23 @@ export default function HistoryListPage() {
         </div>
       )}
 
+      {pendingHideIds.length > 0 && (
+        <div className={styles.undoToastWrap}>
+          <div className={styles.undoToast}>
+            <span className={styles.undoToastText}>
+              이력 {pendingHideIds.length}개를 삭제했습니다
+            </span>
+            <button
+              type="button"
+              className={styles.undoToastAction}
+              onClick={handleUndoHide}
+            >
+              실행 취소
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={styles.listSection}>
         <div className={styles.listHeader}>
           <button
@@ -406,12 +495,27 @@ export default function HistoryListPage() {
           </div>
         )}
 
-        {hasProject && !error && loading && allEntries.length === 0 && (
+        {hasProject && !error && loading && (
           <p className={styles.stateMessage}>이력을 불러오는 중...</p>
         )}
 
+        {hasProject && !error && !loading && entries.length === 0 && (
+          <div className={styles.stateMessage}>
+            {hasAnyFilter ? (
+              <>
+                <span>조건에 맞는 이력이 없습니다.</span>
+                <button type="button" className={styles.stateRetry} onClick={clearAllFilters}>
+                  필터 초기화
+                </button>
+              </>
+            ) : (
+              <span>아직 저장된 이력이 없습니다.</span>
+            )}
+          </div>
+        )}
+
         <div className={styles.list} ref={listRef}>
-          {visibleEntries.map(item => (
+          {hasProject && !error && !loading && visibleEntries.map(item => (
             <PRCard
               key={item.id}
               item={item}
@@ -425,7 +529,7 @@ export default function HistoryListPage() {
               onHide={handleHide}
             />
           ))}
-          {visibleCount < entries.length && (
+          {!loading && visibleCount < entries.length && (
             <div ref={sentinelRef} className={styles.scrollSentinel} />
           )}
         </div>

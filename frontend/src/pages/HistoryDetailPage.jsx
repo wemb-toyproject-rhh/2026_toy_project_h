@@ -1,7 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { getEntryById, getPrevTabContent, getTabContent } from "../services/historyAdapter.js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  filterEntriesByTarget,
+  getEntryById,
+  getPrevTabContent,
+  getTabContent,
+} from "../services/historyAdapter.js";
 import { useHistory } from "../context/HistoryContext.jsx";
+import { useProjects } from "../context/ProjectContext.jsx";
 import { computeDiff } from "../utils/diff.js";
 import Badge from "../components/common/Badge.jsx";
 import BackLink from "../components/common/BackLink.jsx";
@@ -16,17 +22,58 @@ import styles from "./HistoryDetailPage.module.css";
 
 export default function HistoryDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { entries, loading, error, reload, updateMetadata } = useHistory();
+  const { currentProject } = useProjects();
   const entry = getEntryById(entries, id);
+
+  // 이력 id는 프로젝트(대상 DB)별로 매겨지는 값이라, 이 화면을 보다가 다른
+  // 프로젝트로 바꾸면 지금 id는 새 프로젝트에서 의미가 없어집니다(운 나쁘면
+  // 우연히 같은 id의 완전히 다른 이력이 보일 수도 있음) — 진짜 전환이면
+  // 이력전체보기로 보냅니다. 최초 로딩 시의 undefined → 실제 id 전환은 제외합니다.
+  const lastProjectIdRef = useRef(undefined);
+  useEffect(() => {
+    const projectId = currentProject?.id;
+    if (projectId === undefined) return;
+    if (lastProjectIdRef.current !== undefined && lastProjectIdRef.current !== projectId) {
+      navigate("/");
+    }
+    lastProjectIdRef.current = projectId;
+  }, [currentProject?.id, navigate]);
+
+  // 같은 타겟(페이지/컴포넌트)의 다른 버전들 사이를, 리스트로 돌아가지 않고 바로
+  // 오갈 수 있게 저장 시각 순으로 정렬해둡니다.
+  const siblings = useMemo(() => {
+    if (!entry) return [];
+    return [...filterEntriesByTarget(entries, entry.targetId)].sort(
+      (a, b) => new Date(a.savedAtRaw) - new Date(b.savedAtRaw),
+    );
+  }, [entries, entry]);
+  const siblingIndex = entry ? siblings.findIndex((sibling) => sibling.id === entry.id) : -1;
+  const olderEntry = siblingIndex > 0 ? siblings[siblingIndex - 1] : null;
+  const newerEntry =
+    siblingIndex >= 0 && siblingIndex < siblings.length - 1 ? siblings[siblingIndex + 1] : null;
 
   const [activePrimaryId, setActivePrimaryId] = useState(null);
   const [activeSubId, setActiveSubId] = useState(null);
+
+  // 이전/다음 이력 버튼으로 다른 버전으로 넘어가면 id만 바뀌고 이 컴포넌트는
+  // 그대로 재사용되므로(리마운트 안 됨), 탭 선택을 초기화해서 아래 effect가
+  // 새 버전 기준으로 다시 기본 탭을 고르게 합니다.
+  useEffect(() => {
+    setActivePrimaryId(null);
+    setActiveSubId(null);
+  }, [entry?.id]);
 
   // entry arrives asynchronously (fetched from the API), so the default tab
   // is picked once here rather than as a useState initializer.
   useEffect(() => {
     if (!entry || activePrimaryId) return;
-    setActivePrimaryId(entry.primaryTabs.find((tab) => tab.hasSubTabs)?.id ?? entry.primaryTabs[0]?.id);
+    setActivePrimaryId(
+      entry.primaryTabs.find((tab) => tab.modified)?.id
+        ?? entry.primaryTabs.find((tab) => tab.hasSubTabs)?.id
+        ?? entry.primaryTabs[0]?.id,
+    );
     setActiveSubId(entry.lifecycles.find((lc) => lc.modified)?.id ?? entry.lifecycles[0]?.id);
   }, [entry, activePrimaryId]);
 
@@ -91,7 +138,32 @@ export default function HistoryDetailPage() {
 
   return (
     <div className={styles.page}>
-      <BackLink />
+      <div className={styles.topBar}>
+        <BackLink />
+        {siblings.length > 1 && (
+          <div className={styles.historyNav}>
+            <button
+              type="button"
+              className={styles.navBtn}
+              disabled={!olderEntry}
+              onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`)}
+            >
+              ← 이전 이력
+            </button>
+            <span className={styles.navPosition}>
+              {siblingIndex + 1} / {siblings.length}
+            </span>
+            <button
+              type="button"
+              className={styles.navBtn}
+              disabled={!newerEntry}
+              onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`)}
+            >
+              다음 이력 →
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className={styles.header}>
         <div className={styles.titleGroup}>

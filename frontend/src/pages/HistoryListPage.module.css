@@ -380,9 +380,55 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .selectionBar {
+  .selectionBar,
+  .undoToast {
     animation: none;
   }
+}
+
+.undoToastWrap {
+  position: fixed;
+  left: var(--sidebar-width);
+  right: 0;
+  bottom: 22px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.undoToast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--color-text);
+  color: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  animation: selectionBarIn 0.16s ease;
+}
+
+.undoToastText {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.undoToastAction {
+  flex-shrink: 0;
+  padding: 4px 2px;
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.undoToastAction:hover {
+  text-decoration: underline;
 }
 
 .list {

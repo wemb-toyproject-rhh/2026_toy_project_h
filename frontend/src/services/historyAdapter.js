@@ -45,6 +45,20 @@ export function buildTargetTree(entries) {
     }
 
     const pageId = entry.pageTargetId;
+    // 이 페이지 자체의 이력(kind==="page")이 한 번도 없어도, 컴포넌트 이력에 실려오는
+    // pageTargetName(백엔드가 tb_page 조인으로 내려줌)으로 트리에 페이지 노드를 미리
+    // 만들어둡니다 — 안 그러면 이 페이지 밑 컴포넌트들이 사이드바에서 통째로 빠집니다.
+    // 실제 페이지 이력이 없으므로 count는 0으로 유지합니다(자식 카운트와는 별개).
+    if (pageId && !pages.has(pageId)) {
+      pages.set(pageId, {
+        id: pageId,
+        icon: ICON_BY_KIND.page,
+        typeLabel: TYPE_LABEL_BY_KIND.page,
+        label: entry.pageTargetName ?? pageId,
+        count: 0,
+      });
+    }
+
     if (!childrenByPage.has(pageId)) childrenByPage.set(pageId, new Map());
     const bucket = childrenByPage.get(pageId);
     if (!bucket.has(entry.targetId)) {
