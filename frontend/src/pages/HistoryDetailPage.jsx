@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { getEntryById, getPrevTabContent, getTabContent } from "../services/historyAdapter.js";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  filterEntriesByTarget,
+  getEntryById,
+  getPrevTabContent,
+  getTabContent,
+} from "../services/historyAdapter.js";
 import { useHistory } from "../context/HistoryContext.jsx";
 import { computeDiff } from "../utils/diff.js";
 import Badge from "../components/common/Badge.jsx";
@@ -16,11 +21,33 @@ import styles from "./HistoryDetailPage.module.css";
 
 export default function HistoryDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { entries, loading, error, reload, updateMetadata } = useHistory();
   const entry = getEntryById(entries, id);
 
+  // 같은 타겟(페이지/컴포넌트)의 다른 버전들 사이를, 리스트로 돌아가지 않고 바로
+  // 오갈 수 있게 저장 시각 순으로 정렬해둡니다.
+  const siblings = useMemo(() => {
+    if (!entry) return [];
+    return [...filterEntriesByTarget(entries, entry.targetId)].sort(
+      (a, b) => new Date(a.savedAtRaw) - new Date(b.savedAtRaw),
+    );
+  }, [entries, entry]);
+  const siblingIndex = entry ? siblings.findIndex((sibling) => sibling.id === entry.id) : -1;
+  const olderEntry = siblingIndex > 0 ? siblings[siblingIndex - 1] : null;
+  const newerEntry =
+    siblingIndex >= 0 && siblingIndex < siblings.length - 1 ? siblings[siblingIndex + 1] : null;
+
   const [activePrimaryId, setActivePrimaryId] = useState(null);
   const [activeSubId, setActiveSubId] = useState(null);
+
+  // 이전/다음 이력 버튼으로 다른 버전으로 넘어가면 id만 바뀌고 이 컴포넌트는
+  // 그대로 재사용되므로(리마운트 안 됨), 탭 선택을 초기화해서 아래 effect가
+  // 새 버전 기준으로 다시 기본 탭을 고르게 합니다.
+  useEffect(() => {
+    setActivePrimaryId(null);
+    setActiveSubId(null);
+  }, [entry?.id]);
 
   // entry arrives asynchronously (fetched from the API), so the default tab
   // is picked once here rather than as a useState initializer.
@@ -95,7 +122,32 @@ export default function HistoryDetailPage() {
 
   return (
     <div className={styles.page}>
-      <BackLink />
+      <div className={styles.topBar}>
+        <BackLink />
+        {siblings.length > 1 && (
+          <div className={styles.historyNav}>
+            <button
+              type="button"
+              className={styles.navBtn}
+              disabled={!olderEntry}
+              onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`)}
+            >
+              ← 이전 이력
+            </button>
+            <span className={styles.navPosition}>
+              {siblingIndex + 1} / {siblings.length}
+            </span>
+            <button
+              type="button"
+              className={styles.navBtn}
+              disabled={!newerEntry}
+              onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`)}
+            >
+              다음 이력 →
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className={styles.header}>
         <div className={styles.titleGroup}>
