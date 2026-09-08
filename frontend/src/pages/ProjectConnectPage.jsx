@@ -527,43 +527,41 @@ export default function ProjectConnectPage() {
               <p className={styles.empty}>검색 결과가 없습니다</p>
             ) : (
               <div className={styles.galleryGrid}>
-                {filteredProjects.map((project) => (
+                {filteredProjects.map((project) => {
+                  const isActive = project.id === currentProject?.id;
+                  return (
                   <div
                     key={project.id}
-                    className={`${styles.tile} ${
-                      project.id === currentProject?.id ? styles.tileActive : ""
-                    }`}
+                    className={`${styles.tile} ${isActive ? styles.tileActive : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSelect(project.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSelect(project.id);
+                      }
+                    }}
                   >
-                    <button
-                      type="button"
-                      className={styles.tileMain}
-                      onClick={() => handleSelect(project.id)}
+                    <div
+                      className={styles.thumb}
+                      style={{ background: gradientForProject(project.id) }}
                     >
-                      <div
-                        className={styles.thumb}
-                        style={{ background: gradientForProject(project.id) }}
-                      >
-                        <span className={styles.thumbInitial}>
-                          {project.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    </button>
+                      <span className={styles.thumbInitial}>
+                        {project.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                     <div className={styles.tileNameRow}>
                       <EditableTitle
                         value={project.name}
                         className={styles.tileName}
                         onSave={(newName) => handleRename(project.id, newName)}
                       />
+                      {isActive && <span className={styles.activeChip}>연결됨</span>}
                     </div>
-                    <button
-                      type="button"
-                      className={styles.tileMetaBtn}
-                      onClick={() => handleSelect(project.id)}
-                    >
-                      <span className={styles.tileMeta}>
-                        {project.host}:{project.port}
-                      </span>
-                    </button>
+                    <div className={styles.tileMeta}>
+                      {project.host}:{project.port}
+                    </div>
                     <Button
                       type="button"
                       variant="ghostDanger"
@@ -577,7 +575,8 @@ export default function ProjectConnectPage() {
                       <Icon name="trash" size={12} />
                     </Button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

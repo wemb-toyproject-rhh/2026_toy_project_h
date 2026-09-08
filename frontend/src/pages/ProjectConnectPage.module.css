@@ -147,6 +147,7 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--color-surface);
+  cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -157,16 +158,6 @@
 
 .tileActive {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 1px var(--color-accent);
-}
-
-.tileMain {
-  display: block;
-  width: 100%;
-  border: none;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
 }
 
 .thumb {
@@ -187,25 +178,28 @@
 
 .tileNameRow {
   display: flex;
+  align-items: center;
+  gap: 6px;
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px 0;
 }
 
 .tileName {
+  min-width: 0;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--color-text);
 }
 
-.tileMetaBtn {
-  display: block;
-  width: 100%;
-  border: none;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
+.activeChip {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--color-accent-soft-text);
+  background: var(--color-accent-soft);
+  border-radius: 999px;
 }
 
 .tileMeta {
