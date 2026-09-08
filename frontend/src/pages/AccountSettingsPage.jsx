@@ -72,6 +72,10 @@ export default function AccountSettingsPage() {
       setPasswordError(`새 비밀번호는 최소 ${PASSWORD_MIN}자 이상이어야 합니다`);
       return;
     }
+    if (next === current) {
+      setPasswordError("새 비밀번호가 현재 비밀번호와 같습니다");
+      return;
+    }
     if (next !== confirm) {
       setPasswordError("새 비밀번호가 일치하지 않습니다");
       return;
@@ -105,7 +109,7 @@ export default function AccountSettingsPage() {
     }
     if (
       !window.confirm(
-        "정말 계정을 삭제하시겠어요? 연결된 프로젝트 정보도 함께 사라지며 되돌릴 수 없습니다.",
+        "정말 계정을 삭제하시겠어요? 로그인이 즉시 차단되고, 연결된 프로젝트도 함께 비활성화됩니다.",
       )
     ) {
       return;
@@ -232,7 +236,8 @@ export default function AccountSettingsPage() {
       <section className={`${styles.card} ${styles.dangerCard}`}>
         <h2 className={styles.sectionTitle}>계정 삭제</h2>
         <p className={styles.dangerText}>
-          계정을 삭제하면 연결된 프로젝트 정보가 모두 사라지며 되돌릴 수 없습니다.
+          계정을 삭제하면 더 이상 로그인할 수 없고, 연결된 프로젝트도 모두 비활성화됩니다.
+          복구가 필요하면 관리자에게 문의해 주세요.
         </p>
         <form className={styles.dangerForm} onSubmit={handleDeleteAccount}>
           <PasswordInput
