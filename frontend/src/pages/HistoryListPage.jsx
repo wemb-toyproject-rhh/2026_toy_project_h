@@ -10,6 +10,7 @@ import styles from "./HistoryListPage.module.css";
 
 const TYPE_LABELS = { css: "CSS", html: "HTML", js: "JAVASCRIPT" };
 const PAGE_SIZE = 24;
+const UNDO_GRACE_MS = 4000;
 
 export default function HistoryListPage() {
   const { entries: allEntries, loading, error, reload, updateMetadata, hasProject } = useHistory();
@@ -75,11 +76,47 @@ export default function HistoryListPage() {
     updateMetadata(id, { title: newTitle });
   };
 
-  // 실제 데이터는 지우지 않고 hidden 플래그만 세워서, 이 이력이 "전체 이력
-  // 보기"에서만 안 보이게 합니다 (HistoryContext.updateMetadata 가 로컬 목록에서도 같이 걷어냄).
-  const handleHide = (id) => {
-    updateMetadata(id, { hidden: true });
+  // "이력 삭제" 버튼 = 실제로는 hidden 플래그만 세우는 소프트 삭제입니다. 클릭 즉시
+  // API를 호출하지 않고, 화면에서만 먼저 숨긴 뒤(pendingHideIds) 잠시(UNDO_GRACE_MS)
+  // 기다렸다가 실제로 저장합니다 — 그사이 "실행 취소"를 누르면 API 호출 자체가 안
+  // 일어납니다. 우다다 여러 개를 연달아 지워도 타이머가 매번 리셋되면서 하나의
+  // 토스트/실행 취소로 묶입니다.
+  const [pendingHideIds, setPendingHideIds] = useState([]);
+  const pendingHideIdsRef = useRef(pendingHideIds);
+  pendingHideIdsRef.current = pendingHideIds;
+  const pendingHideTimerRef = useRef(null);
+
+  const flushPendingHides = () => {
+    if (pendingHideTimerRef.current) {
+      clearTimeout(pendingHideTimerRef.current);
+      pendingHideTimerRef.current = null;
+    }
+    const ids = pendingHideIdsRef.current;
+    if (ids.length === 0) return;
+    setPendingHideIds([]);
+    ids.forEach((id) => updateMetadata(id, { hidden: true }));
   };
+
+  const handleHide = (id) => {
+    setPendingHideIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    if (pendingHideTimerRef.current) clearTimeout(pendingHideTimerRef.current);
+    pendingHideTimerRef.current = setTimeout(flushPendingHides, UNDO_GRACE_MS);
+  };
+
+  const handleUndoHide = () => {
+    if (pendingHideTimerRef.current) {
+      clearTimeout(pendingHideTimerRef.current);
+      pendingHideTimerRef.current = null;
+    }
+    setPendingHideIds([]);
+  };
+
+  // 프로젝트가 바뀌거나 이 페이지를 벗어나면(상세 화면 이동 등) 유예 시간을 더 기다리지
+  // 않고 즉시 확정 저장합니다 — 그냥 버려두면 "삭제했다고 생각했는데 안 지워짐" 상태가 됩니다.
+  useEffect(() => {
+    return () => flushPendingHides();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProject?.id]);
 
   const targetId = searchParams.get("target");
   const activeTargetLabel = targetId
@@ -104,7 +141,11 @@ export default function HistoryListPage() {
   };
 
   const entries = useMemo(() => {
-    let list = filterEntriesByTarget(allEntries, targetId);
+    let list =
+      pendingHideIds.length > 0
+        ? allEntries.filter(entry => !pendingHideIds.includes(entry.id))
+        : allEntries;
+    list = filterEntriesByTarget(list, targetId);
 
     const query = searchQuery.trim().toLowerCase();
     if (query) {
@@ -135,7 +176,7 @@ export default function HistoryListPage() {
       const diff = new Date(a.savedAtRaw) - new Date(b.savedAtRaw);
       return sortOrder === "asc" ? diff : -diff;
     });
-  }, [allEntries, targetId, searchQuery, dateFrom, dateTo, sortOrder, activeTypes]);
+  }, [allEntries, pendingHideIds, targetId, searchQuery, dateFrom, dateTo, sortOrder, activeTypes]);
 
   // 무한 스크롤: 필터링/정렬된 결과가 아무리 많아도 한 번에 PAGE_SIZE개만 렌더링하고,
   // 목록 아래쪽 sentinel이 보이면 더 불러옵니다. entries 자체가 바뀌면(필터/정렬/재조회)
@@ -381,6 +422,23 @@ export default function HistoryListPage() {
               title="선택 취소"
             >
               <Icon name="close" size={12} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {pendingHideIds.length > 0 && (
+        <div className={styles.undoToastWrap}>
+          <div className={styles.undoToast}>
+            <span className={styles.undoToastText}>
+              이력 {pendingHideIds.length}개를 삭제했습니다
+            </span>
+            <button
+              type="button"
+              className={styles.undoToastAction}
+              onClick={handleUndoHide}
+            >
+              실행 취소
             </button>
           </div>
         </div>
