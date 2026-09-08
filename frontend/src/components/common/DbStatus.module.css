@@ -12,6 +12,13 @@
   white-space: nowrap;
 }
 
+.fail {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-danger);
+  white-space: nowrap;
+}
+
 .refreshBtn {
   display: inline-flex;
   align-items: center;
@@ -41,8 +48,30 @@
   transform: rotate(180deg);
 }
 
+.refreshBtn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.spinning {
+  animation: dbStatusSpin 0.8s linear infinite;
+}
+
+@keyframes dbStatusSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .refreshBtn span {
     transition: none;
+  }
+
+  .spinning {
+    animation: none;
   }
 }
