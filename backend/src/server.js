@@ -14,6 +14,7 @@ import "dotenv/config";
 import express from "express";
 import { query } from "./db.js";
 import { getAllEntries, getEntryById } from "./entries.js";
+import { getUnreadEntries, checkEntry, checkAllEntries } from "./alarms.js";
 import { hashPassword, verifyPassword, issueToken, requireAuth } from "./auth.js";
 import { getProjectPool, testConnection } from "./projectPool.js";
 
@@ -218,6 +219,68 @@ app.put("/api/history/:id/metadata", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("[PUT /api/history/:id/metadata]", err.message);
     res.status(500).json({ error: "저장 실패", detail: err.message });
+  }
+});
+
+// 미확인 알람 목록. tb_alarm_check(대상 DB, 사용자가 프로젝트별로 직접 생성)와 대조해서
+// 로그인한 사용자가 이 프로젝트에서 아직 확인하지 않은 이력만 돌려줍니다.
+// tb_alarm_check 가 없는 프로젝트에서 호출하면 500이 나므로, 그 프로젝트엔 아직 이
+// 테이블을 안 만들었다는 뜻입니다.
+app.get("/api/alarms", requireAuth, async (req, res) => {
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const unread = await getUnreadEntries({
+      userId: req.userId,
+      query: (text, params) => pool.query(text, params),
+    });
+    res.json(unread);
+  } catch (err) {
+    console.error("[GET /api/alarms]", err.message);
+    res.status(500).json({ error: "알람 조회 실패", detail: err.message });
+  }
+});
+
+// 알람 전체 확인. 지금 시점 기준 미확인 전체를 한 번에 확인 처리합니다("전체알림확인" 버튼용).
+// "/api/alarms/:id/check" 보다 먼저 등록해야 "check-all" 이 :id 로 잡히지 않습니다.
+app.post("/api/alarms/check-all", requireAuth, async (req, res) => {
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const checked = await checkAllEntries({
+      userId: req.userId,
+      query: (text, params) => pool.query(text, params),
+    });
+    res.json({ checked });
+  } catch (err) {
+    console.error("[POST /api/alarms/check-all]", err.message);
+    res.status(500).json({ error: "전체 확인 처리 실패", detail: err.message });
+  }
+});
+
+// 알람 개별 확인. id 는 "/api/history/:id/metadata" 와 같은 "page-39"/"inst-101" 형식입니다.
+app.post("/api/alarms/:id/check", requireAuth, async (req, res) => {
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const ok = await checkEntry({
+      userId: req.userId,
+      id: req.params.id,
+      query: (text, params) => pool.query(text, params),
+    });
+    if (!ok) {
+      return res.status(400).json({ error: "id 형식이 올바르지 않습니다 (예: page-39)" });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[POST /api/alarms/:id/check]", err.message);
+    res.status(500).json({ error: "알람 확인 처리 실패", detail: err.message });
   }
 });
 
