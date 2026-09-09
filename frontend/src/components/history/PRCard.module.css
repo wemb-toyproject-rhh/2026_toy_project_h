@@ -54,7 +54,7 @@
 .body {
   flex: 1;
   min-width: 0;
-  padding: 10px 13px 10px 0px;
+  padding: 10px 13px;
   display: flex;
   flex-direction: column;
   gap: 5px;
