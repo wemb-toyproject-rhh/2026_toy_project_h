@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { buildTargetTree, getEntryById } from "../../services/historyAdapter.js";
 import { useHistory } from "../../context/HistoryContext.jsx";
+import { useProjects } from "../../context/ProjectContext.jsx";
 import Icon from "../common/Icon.jsx";
 import DbStatus from "../common/DbStatus.jsx";
 import styles from "./SidebarFilter.module.css";
@@ -13,6 +14,7 @@ export default function SidebarFilter() {
   const location = useLocation();
   const { id } = useParams();
   const { entries } = useHistory();
+  const { currentProject } = useProjects();
   const [collapsedIds, setCollapsedIds] = useState(new Set());
   // Diff 비교처럼 가로 공간이 아쉬운 화면을 위해 사이드바 자체를 접을 수 있게
   // 하고, 그 상태는 페이지를 이동해도(새로고침해도) 유지되도록 기억해둡니다.
@@ -31,6 +33,19 @@ export default function SidebarFilter() {
       // localStorage를 쓸 수 없는 환경(프라이빗 모드 등)이면 그냥 이번 세션에서만 기억합니다.
     }
   }, [sidebarCollapsed]);
+
+  // 프로젝트를 바꾸면(=새로운 트리 컨텍스트) 이전에 접어뒀더라도 일단 펼친
+  // 상태로 보여줍니다 — 같은 프로젝트 안에서 페이지를 이동하는 것과는 다르게,
+  // 새 프로젝트의 전체 구조를 한 번은 보고 시작하는 게 자연스럽습니다.
+  const lastProjectIdRef = useRef(undefined);
+  useEffect(() => {
+    const projectId = currentProject?.id;
+    if (projectId === undefined) return;
+    if (lastProjectIdRef.current !== undefined && lastProjectIdRef.current !== projectId) {
+      setSidebarCollapsed(false);
+    }
+    lastProjectIdRef.current = projectId;
+  }, [currentProject?.id]);
 
   // Detail/compare pages don't carry a "target" query param of their own —
   // derive the sidebar's active target from whatever entry is actually being
