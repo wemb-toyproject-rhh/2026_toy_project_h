@@ -13,6 +13,8 @@ export default function PRCard({
   onToggleSelect,
   onRenameTitle,
   onHide,
+  isEditingTitle = false,
+  onTitleEditingChange,
 }) {
   const navigate = useNavigate();
   const toggleBlocked = !selected && selectionDisabled;
@@ -70,6 +72,8 @@ export default function PRCard({
               value={item.title}
               className={styles.title}
               onSave={(newTitle) => onRenameTitle?.(item.id, newTitle)}
+              editing={isEditingTitle}
+              onEditingChange={(next) => onTitleEditingChange?.(next ? item.id : null)}
             />
           </div>
 

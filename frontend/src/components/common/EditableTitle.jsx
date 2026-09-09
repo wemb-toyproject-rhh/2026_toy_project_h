@@ -2,8 +2,23 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import styles from "./EditableTitle.module.css";
 
-export default function EditableTitle({ value, onSave, className = "" }) {
-  const [editing, setEditing] = useState(false);
+export default function EditableTitle({
+  value,
+  onSave,
+  className = "",
+  editing: controlledEditing,
+  onEditingChange,
+}) {
+  // 목록 화면처럼 카드가 여러 개 있을 때 "한 번에 하나만 수정 모드"로 유지하고 싶은
+  // 곳은 editing/onEditingChange를 넘겨 상위에서 제어하고, 그 외(상세 페이지 제목 등
+  // 인스턴스가 하나뿐인 곳)는 두 prop을 안 넘기면 예전처럼 내부 상태로 동작합니다.
+  const isControlled = controlledEditing !== undefined;
+  const [internalEditing, setInternalEditing] = useState(false);
+  const editing = isControlled ? controlledEditing : internalEditing;
+  const setEditing = (next) => {
+    if (isControlled) onEditingChange?.(next);
+    else setInternalEditing(next);
+  };
   const [draft, setDraft] = useState(value);
   const inputRef = useRef(null);
 
