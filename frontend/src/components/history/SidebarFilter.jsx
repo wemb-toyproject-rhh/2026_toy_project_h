@@ -68,7 +68,10 @@ export default function SidebarFilter() {
     groupIdsWithChildren.every(pageId => collapsedIds.has(pageId));
 
   return (
-    <aside className={`${styles.sidebar} ${sidebarCollapsed ? styles.collapsed : ""}`}>
+    <aside
+      className={`${styles.sidebar} ${sidebarCollapsed ? styles.collapsed : ""}`}
+      onClick={sidebarCollapsed ? () => setSidebarCollapsed(false) : undefined}
+    >
       <button
         type="button"
         className={styles.collapseToggle}

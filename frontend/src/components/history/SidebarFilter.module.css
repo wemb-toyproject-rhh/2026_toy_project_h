@@ -15,6 +15,7 @@
   width: 28px;
   padding: 12px 4px;
   align-items: center;
+  cursor: pointer;
 }
 
 .collapseToggle {
@@ -38,7 +39,8 @@
   transition: right 0.12s ease, background 0.12s ease, color 0.12s ease;
 }
 
-.collapseToggle:hover {
+.collapseToggle:hover,
+.sidebar.collapsed:hover .collapseToggle {
   right: -14px;
   background: var(--color-surface-sunken);
   color: var(--color-text);
