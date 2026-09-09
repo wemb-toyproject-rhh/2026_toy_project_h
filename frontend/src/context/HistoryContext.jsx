@@ -89,3 +89,9 @@ export function useHistory() {
   if (!ctx) throw new Error("useHistory must be used within a HistoryProvider");
   return ctx;
 }
+
+// Header처럼 HistoryProvider가 없는 화면(계정 설정 등)에도 함께 쓰이는 컴포넌트를
+// 위한 안전한 버전입니다 — 프로바이더가 없으면 에러 대신 null을 돌려줍니다.
+export function useHistoryOptional() {
+  return useContext(HistoryContext);
+}
