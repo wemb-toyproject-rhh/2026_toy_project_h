@@ -49,6 +49,11 @@
   margin-top: 2px;
   accent-color: var(--color-accent);
   flex-shrink: 0;
+  cursor: pointer;
+}
+
+.checkbox:disabled {
+  cursor: not-allowed;
 }
 
 .body {
