@@ -57,6 +57,21 @@ export default function HistoryDetailPage() {
   const [activePrimaryId, setActivePrimaryId] = useState(null);
   const [activeSubId, setActiveSubId] = useState(null);
 
+  // 위쪽 topBar의 이전/다음 버튼이 스크롤로 화면 밖으로 나갈 만큼 내려갔을 때만
+  // 하단에도 같은 버튼을 띄웁니다 — 안 그러면 내용이 짧아도 항상 둘 다 보여서
+  // 위/아래 버튼이 중복으로 겹쳐 보입니다.
+  const [scrolledPastTop, setScrolledPastTop] = useState(false);
+  useEffect(() => {
+    const container = document.querySelector("[data-scroll-container]");
+    if (!container) return undefined;
+
+    const handleScroll = () => setScrolledPastTop(container.scrollTop > 200);
+    handleScroll();
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
   // 이전/다음 이력 버튼으로 다른 버전으로 넘어가면 id만 바뀌고 이 컴포넌트는
   // 그대로 재사용되므로(리마운트 안 됨), 탭 선택을 초기화해서 아래 effect가
   // 새 버전 기준으로 다시 기본 탭을 고르게 합니다.
@@ -206,6 +221,30 @@ export default function HistoryDetailPage() {
       />
 
       <DiffBlock lines={diffLines} />
+
+      {siblings.length > 1 && scrolledPastTop && (
+        <div className={styles.floatingNav}>
+          <button
+            type="button"
+            className={styles.navBtn}
+            disabled={!olderEntry}
+            onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`)}
+          >
+            ← 이전 이력
+          </button>
+          <span className={styles.navPosition}>
+            {siblingIndex + 1} / {siblings.length}
+          </span>
+          <button
+            type="button"
+            className={styles.navBtn}
+            disabled={!newerEntry}
+            onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`)}
+          >
+            다음 이력 →
+          </button>
+        </div>
+      )}
 
       <ScrollToTopButton />
     </div>

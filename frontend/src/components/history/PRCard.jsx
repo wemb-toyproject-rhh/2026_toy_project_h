@@ -13,6 +13,8 @@ export default function PRCard({
   onToggleSelect,
   onRenameTitle,
   onHide,
+  isEditingTitle = false,
+  onTitleEditingChange,
 }) {
   const navigate = useNavigate();
   const toggleBlocked = !selected && selectionDisabled;
@@ -22,53 +24,56 @@ export default function PRCard({
     onToggleSelect(item.id);
   };
 
-  const goToDetail = (e) => {
-    e.stopPropagation();
-    navigate(`/history/${item.id}`);
-  };
+  const goToDetail = () => navigate(`/history/${item.id}`);
 
   return (
     <div
       className={`${styles.card} ${selected ? styles.highlighted : ""} ${toggleBlocked ? styles.disabled : ""}`}
-      role="checkbox"
-      aria-checked={selected}
-      aria-disabled={toggleBlocked}
-      tabIndex={0}
-      onClick={handleToggle}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleToggle();
-        }
-      }}
     >
-      <input
-        type="checkbox"
-        className={styles.checkbox}
-        aria-hidden="true"
-        tabIndex={-1}
-        checked={selected}
-        disabled={toggleBlocked}
-        onClick={(e) => e.stopPropagation()}
-        onChange={handleToggle}
-      />
+      <div
+        className={styles.checkboxZone}
+        role="checkbox"
+        aria-checked={selected}
+        aria-disabled={toggleBlocked}
+        tabIndex={0}
+        onClick={handleToggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleToggle();
+          }
+        }}
+      >
+        <input
+          type="checkbox"
+          className={styles.checkbox}
+          aria-hidden="true"
+          tabIndex={-1}
+          checked={selected}
+          disabled={toggleBlocked}
+          onClick={(e) => e.stopPropagation()}
+          onChange={handleToggle}
+        />
+      </div>
 
-      <div className={styles.body}>
+      <div
+        className={styles.body}
+        role="link"
+        tabIndex={0}
+        onClick={goToDetail}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") goToDetail();
+        }}
+      >
         <div className={styles.topRow}>
-          <div
-            className={styles.titleGroup}
-            role="link"
-            tabIndex={0}
-            onClick={goToDetail}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") goToDetail(e);
-            }}
-          >
+          <div className={styles.titleGroup}>
             <Badge tone={selected ? "accent" : "neutral"}>{item.targetLabel}</Badge>
             <EditableTitle
               value={item.title}
               className={styles.title}
               onSave={(newTitle) => onRenameTitle?.(item.id, newTitle)}
+              editing={isEditingTitle}
+              onEditingChange={(next) => onTitleEditingChange?.(next ? item.id : null)}
             />
           </div>
 

@@ -20,6 +20,9 @@ export default function HistoryListPage() {
   const navigate = useNavigate();
   const [filterOpen, setFilterOpen] = useState(false);
   const filterWrapRef = useRef(null);
+  // 카드가 여러 개라 한 번에 하나의 제목만 수정 모드로 열리게 합니다 — 새로 열면
+  // 이전에 열려 있던 카드는 저장 없이(취소와 동일하게) 자동으로 닫힙니다.
+  const [editingTitleId, setEditingTitleId] = useState(null);
 
   // Filter/sort criteria live in the URL (not local state) so they survive
   // navigating to a detail/compare page and back via BackLink or browser back.
@@ -45,6 +48,7 @@ export default function HistoryListPage() {
     if (id === undefined) return;
     if (lastProjectIdRef.current !== undefined && lastProjectIdRef.current !== id) {
       setSelectedIds([]);
+      setEditingTitleId(null);
       setSearchParams(prev => {
         const next = new URLSearchParams(prev);
         ["target", "q", "from", "to", "types", "sort"].forEach(key => next.delete(key));
@@ -455,6 +459,9 @@ export default function HistoryListPage() {
 
       <div className={styles.listSection}>
         <div className={styles.listHeader}>
+          {hasProject && !error && !loading && hasAnyFilter && (
+            <span className={styles.resultCount}>{entries.length}건</span>
+          )}
           <button
             type="button"
             className={styles.sortToggle}
@@ -527,6 +534,8 @@ export default function HistoryListPage() {
               onToggleSelect={toggleSelect}
               onRenameTitle={handleRenameTitle}
               onHide={handleHide}
+              isEditingTitle={editingTitleId === item.id}
+              onTitleEditingChange={setEditingTitleId}
             />
           ))}
           {!loading && visibleCount < entries.length && (
