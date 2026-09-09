@@ -455,6 +455,9 @@ export default function HistoryListPage() {
 
       <div className={styles.listSection}>
         <div className={styles.listHeader}>
+          {hasProject && !error && !loading && hasAnyFilter && (
+            <span className={styles.resultCount}>{entries.length}건</span>
+          )}
           <button
             type="button"
             className={styles.sortToggle}
