@@ -1,4 +1,5 @@
 .sidebar {
+  position: relative;
   width: var(--sidebar-width);
   flex-shrink: 0;
   min-height: 0;
@@ -7,6 +8,44 @@
   padding: 20px 16px 20px 8px;
   display: flex;
   flex-direction: column;
+  transition: width 0.15s ease;
+}
+
+.sidebar.collapsed {
+  width: 28px;
+  padding: 12px 4px;
+  align-items: center;
+}
+
+.collapseToggle {
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  transform: translateY(-50%);
+  z-index: 5;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 36px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: right 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+.collapseToggle:hover {
+  right: -14px;
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.collapseIconExpanded {
+  transform: rotate(180deg);
 }
 
 .list {
