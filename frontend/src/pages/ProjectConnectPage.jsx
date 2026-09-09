@@ -199,6 +199,8 @@ export default function ProjectConnectPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  // 타일이 여러 개라 한 번에 하나의 이름만 수정 모드로 열리게 합니다.
+  const [editingProjectId, setEditingProjectId] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(forcedGalleryOpen === true);
   const [galleryQuery, setGalleryQuery] = useState("");
   const autoOpenedRef = useRef(false);
@@ -556,6 +558,10 @@ export default function ProjectConnectPage() {
                         value={project.name}
                         className={styles.tileName}
                         onSave={(newName) => handleRename(project.id, newName)}
+                        editing={editingProjectId === project.id}
+                        onEditingChange={(next) =>
+                          setEditingProjectId(next ? project.id : null)
+                        }
                       />
                       {isActive && <span className={styles.activeChip}>연결됨</span>}
                     </div>
