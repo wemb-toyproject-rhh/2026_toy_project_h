@@ -16,6 +16,8 @@ export default function PRCard({
   isEditingTitle = false,
   onTitleEditingChange,
   isNew = false,
+  isStarred = false,
+  onToggleStar,
 }) {
   const navigate = useNavigate();
   const toggleBlocked = !selected && selectionDisabled;
@@ -85,6 +87,19 @@ export default function PRCard({
               {item.savedAt}
               {item.version ? ` · v${item.version}` : ""}
             </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`${styles.starBtn} ${isStarred ? styles.starActive : ""}`}
+              aria-label={isStarred ? "중요 표시 해제" : "중요 표시"}
+              title={isStarred ? "중요 표시 해제" : "중요 표시"}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleStar?.(item.id);
+              }}
+            >
+              <Icon name="star" size={14} filled={isStarred} />
+            </Button>
             <Button
               variant="ghostDanger"
               size="icon"

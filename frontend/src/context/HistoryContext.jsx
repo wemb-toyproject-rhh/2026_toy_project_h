@@ -11,6 +11,11 @@ const HistoryContext = createContext(null);
 // 늘어나므로, 사람이 RENOBIT에서 가끔 저장하는 정도의 빈도에 맞춘 값입니다.
 const POLL_INTERVAL_MS = 20000;
 
+// 중요 표시는 아직 백엔드가 없어서(추후 프로젝트별로 서버에 저장하는 방식으로
+// 옮길 예정) 브라우저에만 프로젝트별로 저장해둡니다 — 이력 id가 프로젝트마다
+// 독립적으로 매겨지는 값이라 프로젝트 id를 키에 꼭 같이 넣습니다.
+const STARRED_STORAGE_PREFIX = "rhh_starred_";
+
 export function HistoryProvider({ children }) {
   const { token } = useAuth();
   const { currentProject, loading: projectsLoading } = useProjects();
@@ -96,6 +101,38 @@ export function HistoryProvider({ children }) {
   // 서버가 실제로 응답한 적이 있으면(=배포됨) 그 값을 그대로 신뢰하고,
   // 아직이면(null) lastSeenAt 기반 추정치로 대신합니다.
   const newEntryIds = serverAlarmIds ?? localNewEntryIds;
+
+  const [starredIds, setStarredIds] = useState(new Set());
+  useEffect(() => {
+    if (!projectId) {
+      setStarredIds(new Set());
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(STARRED_STORAGE_PREFIX + projectId);
+      setStarredIds(raw ? new Set(JSON.parse(raw)) : new Set());
+    } catch {
+      setStarredIds(new Set());
+    }
+  }, [projectId]);
+
+  const toggleStar = useCallback(
+    (id) => {
+      if (!projectId) return;
+      setStarredIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        try {
+          localStorage.setItem(STARRED_STORAGE_PREFIX + projectId, JSON.stringify([...next]));
+        } catch {
+          // localStorage를 쓸 수 없는 환경이면 이번 세션에서만 기억됩니다.
+        }
+        return next;
+      });
+    },
+    [projectId],
+  );
 
   // "다시 시도"를 연달아 누르는 경우 등, 늦게 도착한 이전 요청의 결과가 최신 결과를
   // 덮어쓰지 않도록 requestId 로 "가장 최근 요청"만 반영합니다. 백그라운드 폴링은
@@ -210,6 +247,8 @@ export function HistoryProvider({ children }) {
         newEntryIds,
         markAllSeen,
         checkEntrySeen,
+        starredIds,
+        toggleStar,
       }}
     >
       {children}

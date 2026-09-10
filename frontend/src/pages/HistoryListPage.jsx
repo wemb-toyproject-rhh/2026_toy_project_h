@@ -13,8 +13,17 @@ const PAGE_SIZE = 24;
 const UNDO_GRACE_MS = 4000;
 
 export default function HistoryListPage() {
-  const { entries: allEntries, loading, error, reload, updateMetadata, hasProject, newEntryIds } =
-    useHistory();
+  const {
+    entries: allEntries,
+    loading,
+    error,
+    reload,
+    updateMetadata,
+    hasProject,
+    newEntryIds,
+    starredIds,
+    toggleStar,
+  } = useHistory();
   const { currentProject } = useProjects();
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -538,6 +547,8 @@ export default function HistoryListPage() {
               isEditingTitle={editingTitleId === item.id}
               onTitleEditingChange={setEditingTitleId}
               isNew={newEntryIds.has(item.id)}
+              isStarred={starredIds.has(item.id)}
+              onToggleStar={toggleStar}
             />
           ))}
           {!loading && visibleCount < entries.length && (
