@@ -4,6 +4,7 @@ import HeaderLayout from "./components/common/HeaderLayout.jsx";
 import RequireAuth from "./components/common/RequireAuth.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import SignupPage from "./pages/SignupPage.jsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ProjectConnectPage from "./pages/ProjectConnectPage.jsx";
 import AccountSettingsPage from "./pages/AccountSettingsPage.jsx";
 import HistoryListPage from "./pages/HistoryListPage.jsx";
@@ -18,6 +19,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/connect" element={<ProjectConnectPage />} />
         <Route element={<HeaderLayout />}>
