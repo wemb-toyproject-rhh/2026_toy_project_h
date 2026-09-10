@@ -29,6 +29,7 @@
 | 인증/계정 | PUT | `/api/rhh/users/me/nickname` | 필요 | AccountSettingsPage.jsx |
 | 인증/계정 | PUT | `/api/rhh/users/me/password` | 필요 | AccountSettingsPage.jsx |
 | 인증/계정 | DELETE | `/api/rhh/users/me` | 필요 | AccountSettingsPage.jsx |
+| 인증/계정 | PUT | `/api/rhh/users/password-reset` | 불필요 | *(미구현 화면 — 로그인 화면의 "패스워드 찾기" 페이지 예정)* |
 | 프로젝트 | GET | `/api/rhh/projects` | 필요 | LoginPage.jsx, ProjectContext.jsx(전역 목록) |
 | 프로젝트 | POST | `/api/rhh/projects/test-connection` | 필요 | ProjectConnectPage.jsx |
 | 프로젝트 | POST | `/api/rhh/projects` | 필요 | ProjectConnectPage.jsx (ProjectContext.jsx 경유) |
@@ -39,6 +40,10 @@
 | 이력 | GET | `/api/history/:id` | 필요 | *(미사용 — 목록에서 id로 직접 찾아 씀)* |
 | 이력 | GET | `/api/history/compare` | 필요 | *(미사용 — 목록에서 두 항목 직접 찾아 씀)* |
 | 이력 | PUT | `/api/history/:id/metadata` | 필요 | HistoryListPage.jsx, HistoryDetailPage.jsx (HistoryContext.jsx 경유) |
+| 이력 | PUT | `/api/history/:id/important` | 필요 | *(미구현 화면 — 중요 표시(⭐) 예정)* |
+| 이력 | GET | `/api/history/trash` | 필요 | *(미구현 화면 — 휴지통 화면 예정)* |
+| 이력 | DELETE | `/api/history/:id` | 필요 | *(미구현 화면 — 휴지통 화면의 개별 삭제 예정)* |
+| 이력 | DELETE | `/api/history/trash` | 필요 | *(미구현 화면 — 휴지통 비우기 예정)* |
 | 알람 | GET | `/api/alarms` | 필요 | *(미사용 — 아직 화면 없음)* |
 | 알람 | POST | `/api/alarms/check-all` | 필요 | *(미사용 — 아직 화면 없음)* |
 | 알람 | POST | `/api/alarms/:id/check` | 필요 | *(미사용 — 아직 화면 없음)* |
@@ -144,6 +149,31 @@
 ```
 
 **에러**: `400` 비밀번호 미입력 · `401` 비밀번호 틀림 · `404` 계정 없음
+
+---
+
+### 패스워드 찾기(재설정) ⚠️ 화면 미구현
+`PUT /api/rhh/users/password-reset` — 인증 불필요
+
+로그인 화면 하단 "패스워드 찾기" 페이지용 API입니다. 로그인 자체가 안 되는
+상황(비밀번호를 잊음, 또는 탈퇴)에서 쓰는 거라 인증도, 현재 비밀번호 확인도
+요구하지 않습니다 — 아이디만 맞으면 바로 바뀝니다.
+
+**요청**
+```json
+{ "userId": "string", "newPassword": "string (4자 이상)" }
+```
+
+**성공 (200)**
+```json
+{ "ok": true }
+```
+
+**성공 시 부수 효과**: 비밀번호만 바뀌는 게 아니라 **탈퇴(`use=false`)한 계정도
+자동으로 재활성화**됩니다(`use=true`로 바뀜). 탈퇴한 아이디도 이 API로 비밀번호를
+다시 설정하면 바로 로그인할 수 있게 됩니다.
+
+**에러**: `400` 아이디 미입력/비밀번호 4자 미만 · `404` 존재하지 않는 아이디
 
 ---
 
@@ -293,6 +323,7 @@
   "targetName": "이름",
   "title": "#번호 제목 (제목 없으면 #번호만)",
   "hidden": false,
+  "important": false,
   "author": "작성자 (page만 있음, 2D/3D는 null)",
   "version": "버전 (page만 있음, 2D/3D는 null)",
   "savedAt": "저장 시각",
@@ -306,6 +337,10 @@
 }
 ```
 실제 필드는 이보다 많습니다 — 정확한 모양은 `src/entries.js`의 `buildPageEntry`/`buildInstanceEntry` 참고.
+
+`important` 필드는 요청한 사용자가 이 이력을 중요 표시(⭐)해뒀는지입니다 — 아래
+"중요 표시 켜기/끄기" API 참고. 그 프로젝트 DB에 `tb_history_starred` 테이블이
+아직 없으면 에러 없이 그냥 전부 `false`로 내려갑니다.
 
 **에러**: `400` projectId 누락 · `404` 내 프로젝트가 아님
 
@@ -331,6 +366,100 @@
 
 ---
 
+### 중요 표시 켜기/끄기 ⚠️ 화면 미구현
+`PUT /api/history/:id/important?projectId=` — 인증 필요
+
+`title`/`comment`/`hidden`(=metadata)과 다르게 **요청한 사용자 한 명만의 값**입니다 —
+내가 중요 표시해도 같은 프로젝트를 보는 다른 사용자 화면에는 영향이 없습니다. 그래서
+공용 값인 metadata API와 분리했습니다.
+
+**DB 준비 필요**: 프로젝트가 가리키는 대상 DB에 `tb_history_starred` 테이블이 있어야
+저장이 됩니다(테이블이 없으면 `GET /api/history`는 정상 응답하되 `important`가 항상
+`false`로 나오고, 이 PUT은 `500`이 납니다). 테이블 정의:
+```sql
+CREATE TABLE tb_history_starred (
+  user_id    VARCHAR(1000) NOT NULL,
+  hist_type  VARCHAR(10) NOT NULL,   -- 'page' | 'inst' (아래 id 접두사와 동일)
+  hist_id    INTEGER NOT NULL,
+  PRIMARY KEY (user_id, hist_type, hist_id)
+);
+```
+
+**요청**
+```json
+{ "important": true }
+```
+
+**성공 (200)**
+```json
+{ "id": "page-39", "important": true }
+```
+
+**에러**: `400` id 형식 오류/`important`가 boolean 아님 · `404` 내 프로젝트가 아님
+
+---
+
+## 휴지통
+
+이 섹션의 API는 전부 `?projectId=`가 필요합니다. `PUT .../metadata`로 `hidden: true`
+처리한(=소프트 삭제된) 이력을 다루는 화면용입니다. 여기서 하는 삭제는 **소프트
+삭제와 다르게 실제로 DB row를 지우는 영구 삭제**라 되돌릴 수 없습니다.
+
+⚠️ **주의**: 여러 "프로젝트"가 실수로 같은 물리 DB를 가리키고 있으면(예: 테스트용으로
+같은 DB를 다른 이름으로 여러 번 등록한 경우), 아래 "휴지통 비우기"는 그 DB를 쓰는
+**다른 프로젝트의 숨김 이력까지 같이 지웁니다** — `projectId`로 걸러지는 게 아니라
+그 DB 전체의 `hidden=true`를 지우기 때문입니다. 실제 운영 환경(프로젝트마다 완전히
+분리된 DB)에서는 문제되지 않습니다.
+
+### 휴지통 목록 조회 ⚠️ 화면 미구현
+`GET /api/history/trash?projectId=` — 인증 필요
+
+`hidden=true`로 표시된 이력만 모아서 돌려줍니다. 응답 항목 모양은 `GET /api/history`와
+동일합니다(그중 숨김 처리된 것만 걸러진 부분집합).
+
+**요청**: 없음
+
+**성공 (200)**: `GET /api/history`와 같은 모양의 이력 항목 배열
+
+**에러**: `400` projectId 누락 · `404` 내 프로젝트가 아님
+
+---
+
+### 이력 개별 영구 삭제 ⚠️ 화면 미구현
+`DELETE /api/history/:id?projectId=` — 인증 필요
+
+`hidden=true`(휴지통에 있는 것)인 경우에만 지워집니다 — 아직 숨김 처리 안 된(=화면에
+정상 노출 중인) 이력은 이 API로 못 지웁니다(먼저 `PUT .../metadata`로 `hidden: true`
+처리해야 함).
+
+**요청**: 없음
+
+**성공 (200)**
+```json
+{ "id": "page-39" }
+```
+
+**에러**: `400` id 형식 오류 · `404` 휴지통에서 못 찾음(안 숨겨진 이력이거나 이미 삭제됨) 또는 내 프로젝트가 아님
+
+---
+
+### 휴지통 비우기 ⚠️ 화면 미구현
+`DELETE /api/history/trash?projectId=` — 인증 필요
+
+`hidden=true`인 이력을 전부 한 번에 영구 삭제합니다. 위 "주의" 참고.
+
+**요청**: 없음
+
+**성공 (200)**
+```json
+{ "deleted": 3 }
+```
+`deleted`는 이번 호출로 실제 삭제된 건수입니다(원래 없었으면 `0`).
+
+**에러**: `404` 내 프로젝트가 아님
+
+---
+
 ## 알람 ⚠️ 화면 미구현
 
 미확인 알람 관련 API 3개입니다. 아직 이걸 호출하는 화면이 없습니다.
@@ -339,13 +468,17 @@
 있어야 동작합니다(없는 프로젝트에서 호출하면 `500`). 테이블 정의:
 ```sql
 CREATE TABLE tb_alarm_check (
-  user_id    INTEGER NOT NULL,
+  user_id    VARCHAR(1000) NOT NULL,
   hist_type  VARCHAR(10) NOT NULL,   -- 'page' | 'inst' (아래 id 접두사와 동일)
   hist_id    INTEGER NOT NULL,
   checked_at TIMESTAMP NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, hist_type, hist_id)
 );
 ```
+> ⚠️ `user_id`는 `tb_user_rhh.user_id`(로그인 아이디)와 같은 문자열입니다 —
+> `INTEGER`로 만들면 숫자가 아닌 아이디에서 전부 에러가 납니다(실제로 한 번
+> 겪었던 문제입니다). 이미 `INTEGER`로 만드셨다면
+> `ALTER TABLE tb_alarm_check ALTER COLUMN user_id TYPE VARCHAR(1000);`로 바꿔주세요.
 
 ### 미확인 목록 조회
 `GET /api/alarms?projectId=` — 인증 필요
