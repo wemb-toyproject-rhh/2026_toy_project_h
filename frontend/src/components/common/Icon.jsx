@@ -190,6 +190,24 @@ const ICONS = {
       strokeLinecap="round"
     />
   ),
+  bell: (
+    <>
+      <path
+        d="M8 1.6c-2.4 0-4.3 2-4.3 4.4v1.7c0 1.7-.6 3.4-1.7 4.7l-.4.5c-.4.5-.1 1.2.5 1.2h11.8c.6 0 .9-.7.5-1.2l-.4-.5c-1.1-1.3-1.7-3-1.7-4.7V6c0-2.4-1.9-4.4-4.3-4.4Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6 13.6a2 2 0 0 0 4 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </>
+  ),
   help: (
     <>
       <circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" strokeWidth="1.2" />

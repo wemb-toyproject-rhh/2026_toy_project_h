@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import ProjectSwitcher from "./ProjectSwitcher.jsx";
+import NotificationBell from "./NotificationBell.jsx";
 import Icon from "./Icon.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import styles from "./Header.module.css";
@@ -37,6 +38,7 @@ export default function Header({ hideProjectSwitcher = false }) {
             <Icon name="settings" size={15} />
           </Link>
         </div>
+        <NotificationBell />
         <button type="button" className={styles.logout} onClick={handleLogout}>
           로그아웃
         </button>
