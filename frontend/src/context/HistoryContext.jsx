@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { fetchHistoryEntries, updateHistoryMetadata, setImportant } from "../services/historyApi.js";
 import { fetchAlarms, checkAlarm, checkAllAlarms } from "../services/alarmApi.js";
 import { useAuth } from "./AuthContext.jsx";
@@ -196,12 +197,23 @@ export function HistoryProvider({ children }) {
       });
   }, [token, projectId, projectsLoading]);
 
+  // 휴지통(/trash), Diff 비교(/compare) 화면은 이 목록을 화면에 그대로 쓰지
+  // 않으므로(휴지통은 자기 지역 상태로 따로 조회) 거기 있는 동안은 폴링해봐야
+  // 낭비입니다. 인터벌 자체를 매 네비게이션마다 재설정하면 20초 카운트가 계속
+  // 리셋되니, ref에 최신 경로만 담아두고 tick마다 검사합니다.
+  const { pathname } = useLocation();
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+  const isListRelevantPath = (path) => path === "/" || path.startsWith("/history/");
+
   useEffect(() => {
     if (!token || !projectId) return undefined;
 
     const timerId = setInterval(() => {
-      // 탭이 백그라운드에 있을 땐 굳이 폴링하지 않습니다.
-      if (document.visibilityState === "visible") {
+      // 탭이 백그라운드에 있거나, 지금 화면이 이 목록을 안 쓰는 화면이면 건너뜁니다.
+      if (document.visibilityState === "visible" && isListRelevantPath(pathnameRef.current)) {
         silentRefresh();
         refreshAlarms();
       }
