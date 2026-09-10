@@ -15,6 +15,7 @@ export default function PRCard({
   onHide,
   isEditingTitle = false,
   onTitleEditingChange,
+  isNew = false,
 }) {
   const navigate = useNavigate();
   const toggleBlocked = !selected && selectionDisabled;
@@ -68,6 +69,7 @@ export default function PRCard({
         <div className={styles.topRow}>
           <div className={styles.titleGroup}>
             <Badge tone={selected ? "accent" : "neutral"}>{item.targetLabel}</Badge>
+            {isNew && <span className={styles.newBadge}>새 이력</span>}
             <EditableTitle
               value={item.title}
               className={styles.title}
