@@ -190,7 +190,7 @@ export default function SidebarFilter() {
           </div>
 
           <div className={styles.footer}>
-            <Link to="/trash" className={styles.item}>
+            <Link to="/trash" className={`${styles.item} ${styles.trashItem}`}>
               <span className={styles.itemLabel}>
                 <Icon name="trash" size={13} />
                 <span className={styles.labelText}>휴지통</span>

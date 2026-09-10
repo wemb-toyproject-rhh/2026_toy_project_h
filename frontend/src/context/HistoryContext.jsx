@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { fetchHistoryEntries, updateHistoryMetadata, setImportant } from "../services/historyApi.js";
 import { fetchAlarms, checkAlarm, checkAllAlarms } from "../services/alarmApi.js";
 import { useAuth } from "./AuthContext.jsx";
@@ -17,6 +18,14 @@ export function HistoryProvider({ children }) {
   const projectId = currentProject?.id ?? null;
 
   const [entries, setEntries] = useState([]);
+  // silentRefresh가 받아온 데이터가 기존과 같은지 비교할 때 씁니다 — entries를
+  // silentRefresh의 의존성에 그대로 넣으면 목록이 바뀔 때마다 아래 폴링
+  // useEffect도 다시 실행돼서 20초 카운트가 계속 리셋되므로, ref로만 최신값을
+  // 들고 있습니다.
+  const entriesRef = useRef(entries);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   // 화면의 "갱신" 시각 표시용입니다 — 수동 새로고침이든 백그라운드 폴링이든,
@@ -131,6 +140,9 @@ export function HistoryProvider({ children }) {
   // false로 안 돌아오는 문제가 생길 수 있습니다.
   const requestIdRef = useRef(0);
   const silentRequestIdRef = useRef(0);
+  // 응답이 폴링 주기(20초)보다 오래 걸리는 상황에서 요청이 계속 쌓이는 걸
+  // 막습니다 — 이전 폴링이 아직 안 끝났으면 이번 tick은 건너뜁니다.
+  const silentInFlightRef = useRef(false);
 
   const reload = useCallback(() => {
     if (!token) {
@@ -182,26 +194,47 @@ export function HistoryProvider({ children }) {
   // entry.id를 key로 쓰고 있어서 배열이 새로 생겨도 기존 카드가 재사용됩니다.
   const silentRefresh = useCallback(() => {
     if (!token || projectsLoading || !projectId) return;
+    if (silentInFlightRef.current) return;
 
+    silentInFlightRef.current = true;
     const requestId = ++silentRequestIdRef.current;
     fetchHistoryEntries(token, projectId)
       .then((data) => {
         if (silentRequestIdRef.current !== requestId) return;
-        setEntries(data);
         setLastFetchedAt(new Date());
+        // 받아온 내용이 기존과 완전히 같으면(흔한 경우 — 그 20초 동안 아무도
+        // 저장 안 함) setEntries를 건너뛰어서 리렌더/정렬 재계산을 피합니다.
+        // "갱신 시각"은 그와 무관하게 위에서 이미 갱신했습니다.
+        if (JSON.stringify(data) !== JSON.stringify(entriesRef.current)) {
+          setEntries(data);
+        }
       })
       .catch(() => {
         // 백그라운드 폴링 실패는 화면에 드러내지 않고 조용히 넘어갑니다 —
         // 다음 폴링 때 다시 시도하면 됩니다.
+      })
+      .finally(() => {
+        silentInFlightRef.current = false;
       });
   }, [token, projectId, projectsLoading]);
+
+  // 휴지통(/trash), Diff 비교(/compare) 화면은 이 목록을 화면에 그대로 쓰지
+  // 않으므로(휴지통은 자기 지역 상태로 따로 조회) 거기 있는 동안은 폴링해봐야
+  // 낭비입니다. 인터벌 자체를 매 네비게이션마다 재설정하면 20초 카운트가 계속
+  // 리셋되니, ref에 최신 경로만 담아두고 tick마다 검사합니다.
+  const { pathname } = useLocation();
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+  const isListRelevantPath = (path) => path === "/" || path.startsWith("/history/");
 
   useEffect(() => {
     if (!token || !projectId) return undefined;
 
     const timerId = setInterval(() => {
-      // 탭이 백그라운드에 있을 땐 굳이 폴링하지 않습니다.
-      if (document.visibilityState === "visible") {
+      // 탭이 백그라운드에 있거나, 지금 화면이 이 목록을 안 쓰는 화면이면 건너뜁니다.
+      if (document.visibilityState === "visible" && isListRelevantPath(pathnameRef.current)) {
         silentRefresh();
         refreshAlarms();
       }
@@ -224,10 +257,61 @@ export function HistoryProvider({ children }) {
     [token, projectId],
   );
 
+  // "이력 삭제" = 실제로는 hidden 플래그만 세우는 소프트 삭제입니다. 클릭 즉시 API를
+  // 호출하지 않고, 화면에서 먼저 숨긴 뒤(pendingHideIds) 잠시 기다렸다가 실제로
+  // 저장합니다 — 그사이 "실행 취소"를 누르면 API 호출 자체가 안 일어납니다. 이력
+  // 전체보기(목록)와 사이드바(각 타겟별 카운트)가 형제 컴포넌트라 목록 페이지의
+  // 로컬 상태만으론 사이드바 카운트가 그레이스 기간 동안 낡은 값을 보여주는
+  // 문제가 있어서, 여기 context에 둬서 entries 자체를 걸러 양쪽이 같은 값을 보게 합니다.
+  const [pendingHideIds, setPendingHideIds] = useState([]);
+  const pendingHideIdsRef = useRef(pendingHideIds);
+  pendingHideIdsRef.current = pendingHideIds;
+  const pendingHideTimerRef = useRef(null);
+
+  const flushPendingHides = useCallback(() => {
+    if (pendingHideTimerRef.current) {
+      clearTimeout(pendingHideTimerRef.current);
+      pendingHideTimerRef.current = null;
+    }
+    const ids = pendingHideIdsRef.current;
+    if (ids.length === 0) return;
+    setPendingHideIds([]);
+    ids.forEach((id) => updateMetadata(id, { hidden: true }));
+  }, [updateMetadata]);
+
+  const hidePending = useCallback(
+    (id, graceMs) => {
+      setPendingHideIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      if (pendingHideTimerRef.current) clearTimeout(pendingHideTimerRef.current);
+      pendingHideTimerRef.current = setTimeout(flushPendingHides, graceMs);
+    },
+    [flushPendingHides],
+  );
+
+  const undoHidePending = useCallback(() => {
+    if (pendingHideTimerRef.current) {
+      clearTimeout(pendingHideTimerRef.current);
+      pendingHideTimerRef.current = null;
+    }
+    setPendingHideIds([]);
+  }, []);
+
+  const visibleEntries = useMemo(
+    () =>
+      pendingHideIds.length > 0
+        ? entries.filter((entry) => !pendingHideIds.includes(entry.id))
+        : entries,
+    [entries, pendingHideIds],
+  );
+
   return (
     <HistoryContext.Provider
       value={{
-        entries,
+        entries: visibleEntries,
+        pendingHideIds,
+        hidePending,
+        undoHidePending,
+        flushPendingHides,
         loading,
         error,
         reload,
