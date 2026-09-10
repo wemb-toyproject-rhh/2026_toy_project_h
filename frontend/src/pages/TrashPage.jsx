@@ -11,6 +11,7 @@ import BackLink from "../components/common/BackLink.jsx";
 import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
 import Badge from "../components/common/Badge.jsx";
+import ConfirmDialog from "../components/common/ConfirmDialog.jsx";
 import styles from "./TrashPage.module.css";
 
 export default function TrashPage() {
@@ -61,8 +62,15 @@ export default function TrashPage() {
     }
   };
 
-  const handleDeletePermanently = async (id) => {
-    if (!window.confirm("이 이력을 완전히 삭제하시겠어요? 이 작업은 되돌릴 수 없습니다.")) return;
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const handleDeletePermanently = (id) => {
+    setConfirmDeleteId(id);
+  };
+
+  const confirmDeletePermanently = async () => {
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
     setBusyId(id);
     try {
       await deleteEntryPermanently(token, projectId, id);
@@ -176,6 +184,16 @@ export default function TrashPage() {
           <div className={styles.toast}>{toastMessage}</div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="영구 삭제"
+        message="이 이력을 완전히 삭제하시겠어요? 이 작업은 되돌릴 수 없습니다."
+        confirmLabel="영구 삭제"
+        danger
+        onConfirm={confirmDeletePermanently}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }
