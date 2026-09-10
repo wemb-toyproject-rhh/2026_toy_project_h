@@ -37,3 +37,33 @@ export async function updateHistoryMetadata(token, projectId, id, fields) {
   const data = await res.json();
   return formatEntry(data);
 }
+
+// GET /api/history/trash?projectId= — hidden=true인 이력만 모아서 반환합니다.
+export async function fetchTrashEntries(token, projectId) {
+  const res = await fetch(`${BASE}/trash?projectId=${encodeURIComponent(projectId)}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw await parseErrorResponse(res, "휴지통을 불러오지 못했습니다");
+  const data = await res.json();
+  return data.map(formatEntry);
+}
+
+// DELETE /api/history/:id?projectId= — hidden=true인 것만 지울 수 있는 영구 삭제입니다.
+export async function deleteEntryPermanently(token, projectId, id) {
+  const res = await fetch(`${BASE}/${id}?projectId=${encodeURIComponent(projectId)}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw await parseErrorResponse(res, "영구 삭제에 실패했습니다");
+  return res.json();
+}
+
+// DELETE /api/history/trash?projectId= — 휴지통 비우기(hidden=true 전체 영구 삭제).
+export async function emptyTrash(token, projectId) {
+  const res = await fetch(`${BASE}/trash?projectId=${encodeURIComponent(projectId)}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw await parseErrorResponse(res, "휴지통 비우기에 실패했습니다");
+  return res.json();
+}

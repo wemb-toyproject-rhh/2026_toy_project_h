@@ -190,11 +190,13 @@ export default function SidebarFilter() {
           </div>
 
           <div className={styles.footer}>
+            <Link to="/trash" className={styles.item}>
+              <span className={styles.itemLabel}>
+                <Icon name="trash" size={13} />
+                <span className={styles.labelText}>휴지통</span>
+              </span>
+            </Link>
             <DbStatus />
-            <p className={styles.hint}>
-              페이지나 컴포넌트를 선택하면 해당 타겟의 이력만 <br></br> 필터링되어
-              표시됩니다.
-            </p>
           </div>
         </>
       )}
