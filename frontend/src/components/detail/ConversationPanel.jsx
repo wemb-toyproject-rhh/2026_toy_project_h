@@ -38,7 +38,7 @@ export default function ConversationPanel({ note, onSave }) {
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <span className={styles.title}>Description</span>
+        <span className={styles.title}>메모</span>
         {!editing ? (
           <Button variant="ghost" size="sm" onClick={startEdit}>
             수정
