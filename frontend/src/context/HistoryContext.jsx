@@ -18,6 +18,14 @@ export function HistoryProvider({ children }) {
   const projectId = currentProject?.id ?? null;
 
   const [entries, setEntries] = useState([]);
+  // silentRefresh가 받아온 데이터가 기존과 같은지 비교할 때 씁니다 — entries를
+  // silentRefresh의 의존성에 그대로 넣으면 목록이 바뀔 때마다 아래 폴링
+  // useEffect도 다시 실행돼서 20초 카운트가 계속 리셋되므로, ref로만 최신값을
+  // 들고 있습니다.
+  const entriesRef = useRef(entries);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   // 화면의 "갱신" 시각 표시용입니다 — 수동 새로고침이든 백그라운드 폴링이든,
@@ -188,8 +196,13 @@ export function HistoryProvider({ children }) {
     fetchHistoryEntries(token, projectId)
       .then((data) => {
         if (silentRequestIdRef.current !== requestId) return;
-        setEntries(data);
         setLastFetchedAt(new Date());
+        // 받아온 내용이 기존과 완전히 같으면(흔한 경우 — 그 20초 동안 아무도
+        // 저장 안 함) setEntries를 건너뛰어서 리렌더/정렬 재계산을 피합니다.
+        // "갱신 시각"은 그와 무관하게 위에서 이미 갱신했습니다.
+        if (JSON.stringify(data) !== JSON.stringify(entriesRef.current)) {
+          setEntries(data);
+        }
       })
       .catch(() => {
         // 백그라운드 폴링 실패는 화면에 드러내지 않고 조용히 넘어갑니다 —
