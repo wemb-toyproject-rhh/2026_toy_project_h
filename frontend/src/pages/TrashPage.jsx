@@ -23,6 +23,14 @@ export default function TrashPage() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [emptying, setEmptying] = useState(false);
+  // window.alert 대신 화면 하단에 잠깐 떴다 사라지는 토스트로 실패를 알려줍니다 —
+  // 다른 실패 케이스(영구 삭제, 비우기)도 점진적으로 여기에 맞출 예정입니다.
+  const [toastMessage, setToastMessage] = useState("");
+  useEffect(() => {
+    if (!toastMessage) return undefined;
+    const timerId = setTimeout(() => setToastMessage(""), 3500);
+    return () => clearTimeout(timerId);
+  }, [toastMessage]);
 
   const load = useCallback(() => {
     if (!token || !projectId) {
@@ -48,7 +56,7 @@ export default function TrashPage() {
       await updateHistoryMetadata(token, projectId, id, { hidden: false });
       setEntries((prev) => prev.filter((entry) => entry.id !== id));
     } catch (err) {
-      window.alert(err.message || "복원에 실패했습니다");
+      setToastMessage(err.message || "복원에 실패했습니다");
     } finally {
       setBusyId(null);
     }
@@ -162,6 +170,12 @@ export default function TrashPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {toastMessage && (
+        <div className={styles.toastWrap}>
+          <div className={styles.toast}>{toastMessage}</div>
+        </div>
       )}
     </div>
   );
