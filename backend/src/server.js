@@ -133,6 +133,77 @@ app.get("/api/history/compare", requireAuth, async (req, res) => {
   }
 });
 
+// 휴지통 목록 조회. hidden=true(=PUT .../metadata 로 숨김 처리된) 이력만 모아서
+// 보여줍니다. [휴지통 화면]에서 호출합니다. "/api/history/:id" 보다 먼저 등록해야
+// "trash" 가 :id 로 잡히지 않습니다.
+app.get("/api/history/trash", requireAuth, async (req, res) => {
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const entries = await getAllEntries({
+      includeHidden: true,
+      query: (text, params) => pool.query(text, params),
+    });
+    res.json(entries.filter((entry) => entry.hidden));
+  } catch (err) {
+    console.error("[GET /api/history/trash]", err.message);
+    res.status(500).json({ error: "휴지통 조회 실패", detail: err.message });
+  }
+});
+
+// 휴지통 비우기. hidden=true 인 이력을 전부 실제로(영구) 삭제합니다 — 소프트
+// 삭제(hidden 플래그)와 다르게 이건 되돌릴 수 없습니다. [휴지통 화면]의
+// "휴지통 비우기" 버튼에서 호출합니다. "/api/history/:id" 보다 먼저 등록해야
+// "trash" 가 :id 로 잡히지 않습니다.
+app.delete("/api/history/trash", requireAuth, async (req, res) => {
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const runQuery = (text, params) => pool.query(text, params);
+    const [pageResult, instResult] = await Promise.all([
+      runQuery(`DELETE FROM tb_page_hist WHERE hidden = true RETURNING hist_id`),
+      runQuery(`DELETE FROM tb_instance_hist WHERE hidden = true RETURNING hist_id`),
+    ]);
+    res.json({ deleted: pageResult.rowCount + instResult.rowCount });
+  } catch (err) {
+    console.error("[DELETE /api/history/trash]", err.message);
+    res.status(500).json({ error: "휴지통 비우기 실패", detail: err.message });
+  }
+});
+
+// 이력 개별 영구 삭제. hidden=true(휴지통에 있는 것)인 경우에만 지워집니다 — 아직
+// 숨김 처리 안 된(=화면에 정상 노출 중인) 이력은 이 API로 못 지웁니다(먼저
+// PUT .../metadata 로 hidden:true 처리해야 함). [휴지통 화면]의 개별 삭제 버튼에서
+// 호출합니다. 소프트 삭제와 다르게 되돌릴 수 없습니다.
+app.delete("/api/history/:id", requireAuth, async (req, res) => {
+  const parsed = parseId(req.params.id);
+  if (!parsed) {
+    return res.status(400).json({ error: "id 형식이 올바르지 않습니다 (예: page-39)" });
+  }
+
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const result = await pool.query(
+      `DELETE FROM ${parsed.table} WHERE hist_id = $1 AND hidden = true RETURNING hist_id`,
+      [parsed.histId],
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: `휴지통에서 이력을 찾을 수 없습니다 (id=${req.params.id})` });
+    }
+    res.json({ id: req.params.id });
+  } catch (err) {
+    console.error("[DELETE /api/history/:id]", err.message);
+    res.status(500).json({ error: "이력 삭제 실패", detail: err.message });
+  }
+});
+
 // 이력 단건 조회. [이력 상세 화면]용으로 만들어뒀지만, 그 화면도 위 GET /api/history
 // 로 이미 받아온 목록에서 id로 찾아 쓰는 방식이라 지금은 호출되지 않는 API입니다(미사용).
 app.get("/api/history/:id", requireAuth, async (req, res) => {
