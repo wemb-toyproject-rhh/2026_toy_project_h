@@ -22,6 +22,19 @@ export async function login(userId, password) {
   return data; // { token, userId, projectRecent, userName }
 }
 
+// 로그인이 안 된 상태에서 아이디만으로 비밀번호를 바꿉니다. 본인 확인(인증)
+// 절차가 없는 임시 버전이라 아이디만 맞으면 바뀝니다.
+export async function resetPassword(userId, newPassword) {
+  const res = await fetch(`${BASE}/users/password-reset`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, newPassword }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `비밀번호 변경에 실패했습니다 (${res.status})`);
+  return data; // { ok: true }
+}
+
 // 빈 문자열을 보내면 닉네임을 지웁니다(백엔드가 null로 저장).
 export async function changeNickname(token, userName) {
   const res = await fetch(`${BASE}/users/me/nickname`, {

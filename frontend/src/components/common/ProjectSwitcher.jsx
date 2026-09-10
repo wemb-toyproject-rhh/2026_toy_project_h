@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "../../context/ProjectContext.jsx";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 import Icon from "./Icon.jsx";
 import styles from "./ProjectSwitcher.module.css";
 
@@ -11,9 +12,24 @@ export default function ProjectSwitcher() {
   const wrapRef = useRef(null);
   const navigate = useNavigate();
 
-  const handleDisconnect = async (project) => {
+  // window.alert 대신 화면 하단에 잠깐 떴다 사라지는 토스트로 실패를 알려줍니다.
+  const [toastMessage, setToastMessage] = useState("");
+  useEffect(() => {
+    if (!toastMessage) return undefined;
+    const timerId = setTimeout(() => setToastMessage(""), 3500);
+    return () => clearTimeout(timerId);
+  }, [toastMessage]);
+
+  const [confirmDisconnectProject, setConfirmDisconnectProject] = useState(null);
+
+  const handleDisconnect = (project) => {
     if (deletingId) return;
-    if (!window.confirm(`"${project.name}" 연결을 끊으시겠어요?`)) return;
+    setConfirmDisconnectProject(project);
+  };
+
+  const confirmDisconnect = async () => {
+    const project = confirmDisconnectProject;
+    setConfirmDisconnectProject(null);
     setDeletingId(project.id);
     try {
       await deleteProject(project.id);
@@ -22,7 +38,7 @@ export default function ProjectSwitcher() {
         navigate("/connect");
       }
     } catch (err) {
-      window.alert(err.message || "연결 끊기에 실패했습니다");
+      setToastMessage(err.message || "연결 끊기에 실패했습니다");
     } finally {
       setDeletingId(null);
     }
@@ -106,6 +122,22 @@ export default function ProjectSwitcher() {
           </button>
         </div>
       )}
+
+      {toastMessage && (
+        <div className={styles.toastWrap}>
+          <div className={styles.toast}>{toastMessage}</div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmDisconnectProject !== null}
+        title="연결 끊기"
+        message={`"${confirmDisconnectProject?.name}" 연결을 끊으시겠어요?`}
+        confirmLabel="연결 끊기"
+        danger
+        onConfirm={confirmDisconnect}
+        onCancel={() => setConfirmDisconnectProject(null)}
+      />
     </div>
   );
 }

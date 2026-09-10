@@ -11,6 +11,8 @@ import { useProjects } from "../context/ProjectContext.jsx";
 import { computeDiff } from "../utils/diff.js";
 import Badge from "../components/common/Badge.jsx";
 import BackLink from "../components/common/BackLink.jsx";
+import Button from "../components/common/Button.jsx";
+import Icon from "../components/common/Icon.jsx";
 import EditableTitle from "../components/common/EditableTitle.jsx";
 import DiffStatBadge from "../components/common/DiffStatBadge.jsx";
 import CopyButton from "../components/common/CopyButton.jsx";
@@ -23,9 +25,15 @@ import styles from "./HistoryDetailPage.module.css";
 export default function HistoryDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { entries, loading, error, reload, updateMetadata } = useHistory();
+  const { entries, loading, error, reload, updateMetadata, checkEntrySeen, starredIds, toggleStar } =
+    useHistory();
   const { currentProject } = useProjects();
   const entry = getEntryById(entries, id);
+
+  // 상세 화면에 들어오면 그 이력을 "확인함"으로 표시합니다.
+  useEffect(() => {
+    if (entry?.id) checkEntrySeen(entry.id);
+  }, [entry?.id, checkEntrySeen]);
 
   // 이력 id는 프로젝트(대상 DB)별로 매겨지는 값이라, 이 화면을 보다가 다른
   // 프로젝트로 바꾸면 지금 id는 새 프로젝트에서 의미가 없어집니다(운 나쁘면
@@ -161,7 +169,7 @@ export default function HistoryDetailPage() {
               type="button"
               className={styles.navBtn}
               disabled={!olderEntry}
-              onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`)}
+              onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`, { replace: true })}
             >
               ← 이전 이력
             </button>
@@ -172,7 +180,7 @@ export default function HistoryDetailPage() {
               type="button"
               className={styles.navBtn}
               disabled={!newerEntry}
-              onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`)}
+              onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`, { replace: true })}
             >
               다음 이력 →
             </button>
@@ -195,6 +203,16 @@ export default function HistoryDetailPage() {
             {entry.savedAt}
             {entry.version ? ` · v${entry.version}` : ""}
           </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`${styles.starBtn} ${starredIds.has(entry.id) ? styles.starActive : ""}`}
+            aria-label={starredIds.has(entry.id) ? "중요 표시 해제" : "중요 표시"}
+            title={starredIds.has(entry.id) ? "중요 표시 해제" : "중요 표시"}
+            onClick={() => toggleStar(entry.id)}
+          >
+            <Icon name="star" size={15} filled={starredIds.has(entry.id)} />
+          </Button>
           <CopyButton
             text={getTabContent(entry, activePrimaryId, activeSubId)}
             label={`${activeCopyLabel} 코드 복사`}
@@ -228,7 +246,7 @@ export default function HistoryDetailPage() {
             type="button"
             className={styles.navBtn}
             disabled={!olderEntry}
-            onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`)}
+            onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`, { replace: true })}
           >
             ← 이전 이력
           </button>
@@ -239,7 +257,7 @@ export default function HistoryDetailPage() {
             type="button"
             className={styles.navBtn}
             disabled={!newerEntry}
-            onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`)}
+            onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`, { replace: true })}
           >
             다음 이력 →
           </button>

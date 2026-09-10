@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { fetchHistoryEntries, updateHistoryMetadata } from "../services/historyApi.js";
+import { fetchHistoryEntries, updateHistoryMetadata, setImportant } from "../services/historyApi.js";
+import { fetchAlarms, checkAlarm, checkAllAlarms } from "../services/alarmApi.js";
 import { useAuth } from "./AuthContext.jsx";
 import { useProjects } from "./ProjectContext.jsx";
 
@@ -28,13 +29,62 @@ export function HistoryProvider({ children }) {
   // 포함) 그 순간으로 기준선을 다시 잡아서, 이미 있던 이력이 전부 "새 이력"으로
   // 보이는 걸 막습니다. 그 이후 폴링 등으로 새로 생긴 이력만 새 것으로 간주됩니다.
   const [lastSeenAt, setLastSeenAt] = useState(null);
+  // 백엔드의 진짜 미확인 이력 목록(tb_alarm_check 기반, API_sub_알람관련.md)입니다.
+  // 아직 배포 전이라 null(=모름)로 시작하고, 첫 조회에 성공하면 그때부터 이 값이
+  // lastSeenAt 추정치보다 우선합니다. 배포되면 프론트 수정 없이 자동으로 이 값이
+  // 쓰이게 됩니다.
+  const [serverAlarmIds, setServerAlarmIds] = useState(null);
   useEffect(() => {
     if (projectId) setLastSeenAt(new Date());
+    setServerAlarmIds(null);
   }, [projectId]);
 
-  const markAllSeen = useCallback(() => setLastSeenAt(new Date()), []);
+  const refreshAlarms = useCallback(() => {
+    if (!token || !projectId) return;
+    fetchAlarms(token, projectId)
+      .then((data) => setServerAlarmIds(new Set(data.map((entry) => entry.id))))
+      .catch(() => {
+        // /api/alarms가 아직 없거나(404) 실패하면 조용히 넘어가고, 아래
+        // lastSeenAt 기반 추정치를 계속 씁니다.
+      });
+  }, [token, projectId]);
 
-  const newEntryIds = useMemo(() => {
+  useEffect(() => {
+    refreshAlarms();
+  }, [refreshAlarms]);
+
+  const markAllSeen = useCallback(() => {
+    setLastSeenAt(new Date());
+    if (token && projectId) {
+      checkAllAlarms(token, projectId)
+        .then(() => setServerAlarmIds(new Set()))
+        .catch(() => {
+          // 백엔드 준비 전이면 위에서 이미 처리한 lastSeenAt만으로 동작합니다.
+        });
+    }
+  }, [token, projectId]);
+
+  // 이력 상세/Diff 화면에 들어가면 그 이력 하나만 "확인함"으로 표시합니다.
+  // 백엔드 준비 전이면 실패를 조용히 무시합니다(로컬 추정치는 lastSeenAt 기준으로
+  // 계속 동작하므로 화면엔 영향 없습니다).
+  const checkEntrySeen = useCallback(
+    (id) => {
+      if (!token || !projectId || !id) return;
+      checkAlarm(token, projectId, id)
+        .then(() => {
+          setServerAlarmIds((prev) => {
+            if (!prev || !prev.has(id)) return prev;
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        })
+        .catch(() => {});
+    },
+    [token, projectId],
+  );
+
+  const localNewEntryIds = useMemo(() => {
     if (!lastSeenAt) return new Set();
     const ids = new Set();
     entries.forEach((entry) => {
@@ -42,6 +92,37 @@ export function HistoryProvider({ children }) {
     });
     return ids;
   }, [entries, lastSeenAt]);
+
+  // 서버가 실제로 응답한 적이 있으면(=배포됨) 그 값을 그대로 신뢰하고,
+  // 아직이면(null) lastSeenAt 기반 추정치로 대신합니다.
+  const newEntryIds = serverAlarmIds ?? localNewEntryIds;
+
+  // 중요 표시(⭐)는 서버(tb_history_starred, 로그인한 사용자 본인만의 값)가
+  // 진실 값입니다 — GET /api/history 가 내려주는 entry.important 를 그대로
+  // 반영합니다. 낙관적으로 먼저 반영하고, 실패하면(예: 이 프로젝트에 아직
+  // tb_history_starred 테이블이 없는 경우) 원래 상태로 되돌립니다.
+  const starredIds = useMemo(
+    () => new Set(entries.filter((entry) => entry.important).map((entry) => entry.id)),
+    [entries],
+  );
+
+  const toggleStar = useCallback(
+    (id) => {
+      if (!projectId) return;
+      const target = entries.find((entry) => entry.id === id);
+      if (!target) return;
+      const nextImportant = !target.important;
+      setEntries((prev) =>
+        prev.map((entry) => (entry.id === id ? { ...entry, important: nextImportant } : entry)),
+      );
+      setImportant(token, projectId, id, nextImportant).catch(() => {
+        setEntries((prev) =>
+          prev.map((entry) => (entry.id === id ? { ...entry, important: !nextImportant } : entry)),
+        );
+      });
+    },
+    [projectId, token, entries],
+  );
 
   // "다시 시도"를 연달아 누르는 경우 등, 늦게 도착한 이전 요청의 결과가 최신 결과를
   // 덮어쓰지 않도록 requestId 로 "가장 최근 요청"만 반영합니다. 백그라운드 폴링은
@@ -120,11 +201,14 @@ export function HistoryProvider({ children }) {
 
     const timerId = setInterval(() => {
       // 탭이 백그라운드에 있을 땐 굳이 폴링하지 않습니다.
-      if (document.visibilityState === "visible") silentRefresh();
+      if (document.visibilityState === "visible") {
+        silentRefresh();
+        refreshAlarms();
+      }
     }, POLL_INTERVAL_MS);
 
     return () => clearInterval(timerId);
-  }, [token, projectId, silentRefresh]);
+  }, [token, projectId, silentRefresh, refreshAlarms]);
 
   const updateMetadata = useCallback(
     async (id, fields) => {
@@ -152,6 +236,9 @@ export function HistoryProvider({ children }) {
         lastFetchedAt,
         newEntryIds,
         markAllSeen,
+        checkEntrySeen,
+        starredIds,
+        toggleStar,
       }}
     >
       {children}

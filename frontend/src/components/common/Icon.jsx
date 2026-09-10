@@ -273,7 +273,28 @@ const ICONS = {
   ),
 };
 
-export default function Icon({ name, size = 14, className = "", direction }) {
+export default function Icon({ name, size = 14, className = "", direction, filled }) {
+  if (name === "star") {
+    return (
+      <svg
+        className={className}
+        width={size}
+        height={size}
+        viewBox="0 0 16 16"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d="M8 1.6l1.85 3.87 4.15.62-3 3.02.71 4.29L8 11.4l-3.71 2 .71-4.29-3-3.02 4.15-.62Z"
+          fill={filled ? "currentColor" : "none"}
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
   if (name === "sortArrows") {
     const upColor = direction === "asc" ? "var(--color-accent)" : "currentColor";
     const downColor = direction === "desc" ? "var(--color-accent)" : "currentColor";
