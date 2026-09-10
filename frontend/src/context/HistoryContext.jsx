@@ -257,10 +257,61 @@ export function HistoryProvider({ children }) {
     [token, projectId],
   );
 
+  // "이력 삭제" = 실제로는 hidden 플래그만 세우는 소프트 삭제입니다. 클릭 즉시 API를
+  // 호출하지 않고, 화면에서 먼저 숨긴 뒤(pendingHideIds) 잠시 기다렸다가 실제로
+  // 저장합니다 — 그사이 "실행 취소"를 누르면 API 호출 자체가 안 일어납니다. 이력
+  // 전체보기(목록)와 사이드바(각 타겟별 카운트)가 형제 컴포넌트라 목록 페이지의
+  // 로컬 상태만으론 사이드바 카운트가 그레이스 기간 동안 낡은 값을 보여주는
+  // 문제가 있어서, 여기 context에 둬서 entries 자체를 걸러 양쪽이 같은 값을 보게 합니다.
+  const [pendingHideIds, setPendingHideIds] = useState([]);
+  const pendingHideIdsRef = useRef(pendingHideIds);
+  pendingHideIdsRef.current = pendingHideIds;
+  const pendingHideTimerRef = useRef(null);
+
+  const flushPendingHides = useCallback(() => {
+    if (pendingHideTimerRef.current) {
+      clearTimeout(pendingHideTimerRef.current);
+      pendingHideTimerRef.current = null;
+    }
+    const ids = pendingHideIdsRef.current;
+    if (ids.length === 0) return;
+    setPendingHideIds([]);
+    ids.forEach((id) => updateMetadata(id, { hidden: true }));
+  }, [updateMetadata]);
+
+  const hidePending = useCallback(
+    (id, graceMs) => {
+      setPendingHideIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      if (pendingHideTimerRef.current) clearTimeout(pendingHideTimerRef.current);
+      pendingHideTimerRef.current = setTimeout(flushPendingHides, graceMs);
+    },
+    [flushPendingHides],
+  );
+
+  const undoHidePending = useCallback(() => {
+    if (pendingHideTimerRef.current) {
+      clearTimeout(pendingHideTimerRef.current);
+      pendingHideTimerRef.current = null;
+    }
+    setPendingHideIds([]);
+  }, []);
+
+  const visibleEntries = useMemo(
+    () =>
+      pendingHideIds.length > 0
+        ? entries.filter((entry) => !pendingHideIds.includes(entry.id))
+        : entries,
+    [entries, pendingHideIds],
+  );
+
   return (
     <HistoryContext.Provider
       value={{
-        entries,
+        entries: visibleEntries,
+        pendingHideIds,
+        hidePending,
+        undoHidePending,
+        flushPendingHides,
         loading,
         error,
         reload,
