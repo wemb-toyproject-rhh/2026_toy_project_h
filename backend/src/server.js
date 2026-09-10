@@ -362,6 +362,42 @@ app.post("/api/rhh/login", async (req, res) => {
   }
 });
 
+// [패스워드 찾기 화면] 비밀번호 재설정. 로그인 자체가 안 되는 상황(비밀번호를 잊음,
+// 또는 탈퇴)에서 쓰는 API라 인증도, 현재 비밀번호 확인도 요구하지 않습니다 —
+// tb_user_rhh 에 그 아이디가 존재하기만 하면 비밀번호를 새로 바꾸고 use 도 true 로
+// 되살립니다. 그래서 탈퇴(use=false)한 계정도 이 API로 비밀번호를 다시 설정하면
+// 그대로 재활성화됩니다(탈퇴한 아이디로는 재가입도, 재로그인도 못 하던 문제의 우회
+// 경로이기도 합니다).
+//
+// ⚠️ 아이디만 알면 본인 확인 절차 없이 누구나 그 계정 비밀번호를 바꿀 수 있는
+// 구조입니다 — 이메일 인증 같은 본인 확인 수단이 없는 토이 프로젝트라 의도적으로
+// 이렇게 두지만, 실서비스라면 반드시 본인 확인 단계가 있어야 합니다.
+app.put("/api/rhh/users/password-reset", async (req, res) => {
+  const { userId, newPassword } = req.body ?? {};
+
+  if (typeof userId !== "string" || !userId.trim()) {
+    return res.status(400).json({ error: "아이디를 입력해 주세요" });
+  }
+  if (typeof newPassword !== "string" || newPassword.length < PASSWORD_MIN) {
+    return res.status(400).json({ error: `비밀번호는 최소 ${PASSWORD_MIN}자 이상이어야 합니다` });
+  }
+
+  try {
+    const hashed = await hashPassword(newPassword);
+    const result = await query(
+      `UPDATE tb_user_rhh SET password = $1, use = true WHERE user_id = $2 RETURNING user_id`,
+      [hashed, userId],
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "존재하지 않는 아이디입니다" });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[PUT /api/rhh/users/password-reset]", err.message);
+    res.status(500).json({ error: "비밀번호 재설정 실패", detail: err.message });
+  }
+});
+
 // [계정정보 수정 화면] 닉네임(user_name) 변경. 빈 문자열을 보내면 닉네임을 지웁니다
 // (NULL로 저장 — user_name 은 필수 항목이 아니라서요).
 app.put("/api/rhh/users/me/nickname", requireAuth, async (req, res) => {
