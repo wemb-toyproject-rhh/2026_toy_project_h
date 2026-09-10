@@ -15,6 +15,7 @@ import express from "express";
 import { query } from "./db.js";
 import { getAllEntries, getEntryById } from "./entries.js";
 import { getUnreadEntries, checkEntry, checkAllEntries } from "./alarms.js";
+import { getStarredIds, setStarred } from "./flags.js";
 import { hashPassword, verifyPassword, issueToken, requireAuth } from "./auth.js";
 import { getProjectPool, testConnection } from "./projectPool.js";
 
@@ -95,8 +96,20 @@ app.get("/api/history", requireAuth, async (req, res) => {
 
   try {
     const pool = getProjectPool(project);
-    const entries = await getAllEntries({ query: (text, params) => pool.query(text, params) });
-    res.json(entries);
+    const runQuery = (text, params) => pool.query(text, params);
+    const [entries, starredIds] = await Promise.all([
+      getAllEntries({ query: runQuery }),
+      // 로그인한 사용자가 이 프로젝트에서 중요 표시(⭐)해둔 것들. 사용자별로
+      // 완전히 독립적인 값이라 항목마다 important 필드로 얹어서 내려줍니다.
+      // tb_history_starred 를 아직 안 만든 프로젝트도 있을 수 있어서(부가 기능),
+      // 여기서 실패해도 핵심 기능인 이력 목록 자체는 계속 내려가도록 실패를
+      // 삼키고 "전부 표시 안 함"으로 처리합니다.
+      getStarredIds({ userId: req.userId, query: runQuery }).catch((err) => {
+        console.warn("[GET /api/history] 중요 표시 조회 실패(무시하고 계속):", err.message);
+        return new Set();
+      }),
+    ]);
+    res.json(entries.map((entry) => ({ ...entry, important: starredIds.has(entry.id) })));
   } catch (err) {
     console.error("[GET /api/history]", err.message);
     res.status(500).json({ error: "이력 조회 실패", detail: err.message });
@@ -290,6 +303,37 @@ app.put("/api/history/:id/metadata", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("[PUT /api/history/:id/metadata]", err.message);
     res.status(500).json({ error: "저장 실패", detail: err.message });
+  }
+});
+
+// 이력 중요 표시(⭐) 켜기/끄기. title/comment/hidden(=metadata)과 다르게 이건
+// "요청한 사용자 한 명만의" 값이라 — 프로젝트를 같이 보는 다른 사용자에게는 영향이
+// 없습니다 — 그 쪽 API와 분리했습니다. tb_history_starred(대상 DB, 사용자가
+// 프로젝트별로 직접 생성)가 없는 프로젝트에서 호출하면 500이 납니다.
+app.put("/api/history/:id/important", requireAuth, async (req, res) => {
+  const { important } = req.body ?? {};
+  if (typeof important !== "boolean") {
+    return res.status(400).json({ error: "important 는 boolean 이어야 합니다" });
+  }
+
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const ok = await setStarred({
+      userId: req.userId,
+      id: req.params.id,
+      starred: important,
+      query: (text, params) => pool.query(text, params),
+    });
+    if (!ok) {
+      return res.status(400).json({ error: "id 형식이 올바르지 않습니다 (예: page-39)" });
+    }
+    res.json({ id: req.params.id, important });
+  } catch (err) {
+    console.error("[PUT /api/history/:id/important]", err.message);
+    res.status(500).json({ error: "중요 표시 변경 실패", detail: err.message });
   }
 });
 
