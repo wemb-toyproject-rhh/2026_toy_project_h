@@ -140,6 +140,9 @@ export function HistoryProvider({ children }) {
   // false로 안 돌아오는 문제가 생길 수 있습니다.
   const requestIdRef = useRef(0);
   const silentRequestIdRef = useRef(0);
+  // 응답이 폴링 주기(20초)보다 오래 걸리는 상황에서 요청이 계속 쌓이는 걸
+  // 막습니다 — 이전 폴링이 아직 안 끝났으면 이번 tick은 건너뜁니다.
+  const silentInFlightRef = useRef(false);
 
   const reload = useCallback(() => {
     if (!token) {
@@ -191,7 +194,9 @@ export function HistoryProvider({ children }) {
   // entry.id를 key로 쓰고 있어서 배열이 새로 생겨도 기존 카드가 재사용됩니다.
   const silentRefresh = useCallback(() => {
     if (!token || projectsLoading || !projectId) return;
+    if (silentInFlightRef.current) return;
 
+    silentInFlightRef.current = true;
     const requestId = ++silentRequestIdRef.current;
     fetchHistoryEntries(token, projectId)
       .then((data) => {
@@ -207,6 +212,9 @@ export function HistoryProvider({ children }) {
       .catch(() => {
         // 백그라운드 폴링 실패는 화면에 드러내지 않고 조용히 넘어갑니다 —
         // 다음 폴링 때 다시 시도하면 됩니다.
+      })
+      .finally(() => {
+        silentInFlightRef.current = false;
       });
   }, [token, projectId, projectsLoading]);
 
