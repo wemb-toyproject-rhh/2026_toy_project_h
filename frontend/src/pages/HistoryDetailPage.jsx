@@ -169,7 +169,7 @@ export default function HistoryDetailPage() {
               type="button"
               className={styles.navBtn}
               disabled={!olderEntry}
-              onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`)}
+              onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`, { replace: true })}
             >
               ← 이전 이력
             </button>
@@ -180,7 +180,7 @@ export default function HistoryDetailPage() {
               type="button"
               className={styles.navBtn}
               disabled={!newerEntry}
-              onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`)}
+              onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`, { replace: true })}
             >
               다음 이력 →
             </button>
@@ -246,7 +246,7 @@ export default function HistoryDetailPage() {
             type="button"
             className={styles.navBtn}
             disabled={!olderEntry}
-            onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`)}
+            onClick={() => olderEntry && navigate(`/history/${olderEntry.id}`, { replace: true })}
           >
             ← 이전 이력
           </button>
@@ -257,7 +257,7 @@ export default function HistoryDetailPage() {
             type="button"
             className={styles.navBtn}
             disabled={!newerEntry}
-            onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`)}
+            onClick={() => newerEntry && navigate(`/history/${newerEntry.id}`, { replace: true })}
           >
             다음 이력 →
           </button>
