@@ -11,6 +11,8 @@ import { useProjects } from "../context/ProjectContext.jsx";
 import { computeDiff } from "../utils/diff.js";
 import Badge from "../components/common/Badge.jsx";
 import BackLink from "../components/common/BackLink.jsx";
+import Button from "../components/common/Button.jsx";
+import Icon from "../components/common/Icon.jsx";
 import EditableTitle from "../components/common/EditableTitle.jsx";
 import DiffStatBadge from "../components/common/DiffStatBadge.jsx";
 import CopyButton from "../components/common/CopyButton.jsx";
@@ -23,7 +25,8 @@ import styles from "./HistoryDetailPage.module.css";
 export default function HistoryDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { entries, loading, error, reload, updateMetadata, checkEntrySeen } = useHistory();
+  const { entries, loading, error, reload, updateMetadata, checkEntrySeen, starredIds, toggleStar } =
+    useHistory();
   const { currentProject } = useProjects();
   const entry = getEntryById(entries, id);
 
@@ -200,6 +203,16 @@ export default function HistoryDetailPage() {
             {entry.savedAt}
             {entry.version ? ` · v${entry.version}` : ""}
           </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`${styles.starBtn} ${starredIds.has(entry.id) ? styles.starActive : ""}`}
+            aria-label={starredIds.has(entry.id) ? "중요 표시 해제" : "중요 표시"}
+            title={starredIds.has(entry.id) ? "중요 표시 해제" : "중요 표시"}
+            onClick={() => toggleStar(entry.id)}
+          >
+            <Icon name="star" size={15} filled={starredIds.has(entry.id)} />
+          </Button>
           <CopyButton
             text={getTabContent(entry, activePrimaryId, activeSubId)}
             label={`${activeCopyLabel} 코드 복사`}
