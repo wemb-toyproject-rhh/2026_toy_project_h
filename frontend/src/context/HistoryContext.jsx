@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { fetchHistoryEntries, updateHistoryMetadata } from "../services/historyApi.js";
 import { useAuth } from "./AuthContext.jsx";
 import { useProjects } from "./ProjectContext.jsx";
@@ -22,6 +22,26 @@ export function HistoryProvider({ children }) {
   // 서버에서 실제로 이력을 성공적으로 다시 받아온 시점에만 갱신합니다
   // (updateMetadata처럼 항목 하나만 로컬로 바꾸는 경우는 포함하지 않습니다).
   const [lastFetchedAt, setLastFetchedAt] = useState(null);
+
+  // 알림/목록에서 "새 이력"으로 표시할 기준 시각입니다. 백엔드에 읽음/안읽음이
+  // 아직 없어서 세션 동안만 기억하는 임시 개념입니다 — 프로젝트를 열 때(전환
+  // 포함) 그 순간으로 기준선을 다시 잡아서, 이미 있던 이력이 전부 "새 이력"으로
+  // 보이는 걸 막습니다. 그 이후 폴링 등으로 새로 생긴 이력만 새 것으로 간주됩니다.
+  const [lastSeenAt, setLastSeenAt] = useState(null);
+  useEffect(() => {
+    if (projectId) setLastSeenAt(new Date());
+  }, [projectId]);
+
+  const markAllSeen = useCallback(() => setLastSeenAt(new Date()), []);
+
+  const newEntryIds = useMemo(() => {
+    if (!lastSeenAt) return new Set();
+    const ids = new Set();
+    entries.forEach((entry) => {
+      if (new Date(entry.savedAtRaw) > lastSeenAt) ids.add(entry.id);
+    });
+    return ids;
+  }, [entries, lastSeenAt]);
 
   // "다시 시도"를 연달아 누르는 경우 등, 늦게 도착한 이전 요청의 결과가 최신 결과를
   // 덮어쓰지 않도록 requestId 로 "가장 최근 요청"만 반영합니다. 백그라운드 폴링은
@@ -130,6 +150,8 @@ export function HistoryProvider({ children }) {
         updateMetadata,
         hasProject: Boolean(projectId),
         lastFetchedAt,
+        newEntryIds,
+        markAllSeen,
       }}
     >
       {children}

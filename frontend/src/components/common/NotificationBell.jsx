@@ -7,13 +7,16 @@ import styles from "./NotificationBell.module.css";
 const MAX_ITEMS = 8;
 
 // 읽음/안읽음은 아직 백엔드에 없어서(추후 백엔드 팀원과 별도 설계 예정), 지금은
-// UI 틀만 구성합니다 — 최근 이력을 그대로 보여주고, "전부 확인"은 이 세션 동안만
-// 목록을 비워 보이게 하는 로컬 동작입니다. 새로고침하면 다시 보입니다.
+// 세션 동안만 기억하는 lastSeenAt 기준으로 "새 이력"을 가립니다. HistoryContext의
+// newEntryIds가 같은 기준을 이력 리스트 쪽(PRCard)과도 공유해서, 알림에 뜬 항목이
+// 리스트에서도 동일하게 "새 이력"으로 보입니다. "전부 확인"을 누르면 기준 시각이
+// 지금으로 당겨져서 알림/리스트 표시가 함께 사라집니다.
 export default function NotificationBell() {
   const history = useHistoryOptional();
   const entries = history?.entries;
+  const newEntryIds = history?.newEntryIds;
+  const markAllSeen = history?.markAllSeen;
   const [open, setOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
   const wrapRef = useRef(null);
 
   useEffect(() => {
@@ -34,12 +37,13 @@ export default function NotificationBell() {
     };
   }, [open]);
 
-  const recentEntries = useMemo(() => {
-    if (dismissed || !entries) return [];
-    return [...entries]
+  const newEntries = useMemo(() => {
+    if (!entries || !newEntryIds || newEntryIds.size === 0) return [];
+    return entries
+      .filter((entry) => newEntryIds.has(entry.id))
       .sort((a, b) => new Date(b.savedAtRaw) - new Date(a.savedAtRaw))
       .slice(0, MAX_ITEMS);
-  }, [entries, dismissed]);
+  }, [entries, newEntryIds]);
 
   return (
     <div className={styles.wrap} ref={wrapRef}>
@@ -62,18 +66,18 @@ export default function NotificationBell() {
             <button
               type="button"
               className={styles.markAllBtn}
-              disabled={recentEntries.length === 0}
-              onClick={() => setDismissed(true)}
+              disabled={newEntries.length === 0}
+              onClick={() => markAllSeen?.()}
             >
               전부 확인
             </button>
           </div>
 
-          {recentEntries.length === 0 ? (
+          {newEntries.length === 0 ? (
             <p className={styles.empty}>아직 알림이 없습니다</p>
           ) : (
             <ul className={styles.list}>
-              {recentEntries.map((entry) => (
+              {newEntries.map((entry) => (
                 <li key={entry.id}>
                   <Link
                     to={`/history/${entry.id}`}
