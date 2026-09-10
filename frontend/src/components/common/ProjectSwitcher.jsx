@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "../../context/ProjectContext.jsx";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 import Icon from "./Icon.jsx";
 import styles from "./ProjectSwitcher.module.css";
 
@@ -19,9 +20,16 @@ export default function ProjectSwitcher() {
     return () => clearTimeout(timerId);
   }, [toastMessage]);
 
-  const handleDisconnect = async (project) => {
+  const [confirmDisconnectProject, setConfirmDisconnectProject] = useState(null);
+
+  const handleDisconnect = (project) => {
     if (deletingId) return;
-    if (!window.confirm(`"${project.name}" 연결을 끊으시겠어요?`)) return;
+    setConfirmDisconnectProject(project);
+  };
+
+  const confirmDisconnect = async () => {
+    const project = confirmDisconnectProject;
+    setConfirmDisconnectProject(null);
     setDeletingId(project.id);
     try {
       await deleteProject(project.id);
@@ -120,6 +128,16 @@ export default function ProjectSwitcher() {
           <div className={styles.toast}>{toastMessage}</div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDisconnectProject !== null}
+        title="연결 끊기"
+        message={`"${confirmDisconnectProject?.name}" 연결을 끊으시겠어요?`}
+        confirmLabel="연결 끊기"
+        danger
+        onConfirm={confirmDisconnect}
+        onCancel={() => setConfirmDisconnectProject(null)}
+      />
     </div>
   );
 }
