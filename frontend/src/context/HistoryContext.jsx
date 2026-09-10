@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { fetchHistoryEntries, updateHistoryMetadata } from "../services/historyApi.js";
+import { fetchHistoryEntries, updateHistoryMetadata, setImportant } from "../services/historyApi.js";
 import { fetchAlarms, checkAlarm, checkAllAlarms } from "../services/alarmApi.js";
 import { useAuth } from "./AuthContext.jsx";
 import { useProjects } from "./ProjectContext.jsx";
@@ -10,11 +10,6 @@ const HistoryContext = createContext(null);
 // 폴링 주기입니다. 짧을수록 "실시간"에 가깝지만 그만큼 서버에 불필요한 요청이
 // 늘어나므로, 사람이 RENOBIT에서 가끔 저장하는 정도의 빈도에 맞춘 값입니다.
 const POLL_INTERVAL_MS = 20000;
-
-// 중요 표시는 아직 백엔드가 없어서(추후 프로젝트별로 서버에 저장하는 방식으로
-// 옮길 예정) 브라우저에만 프로젝트별로 저장해둡니다 — 이력 id가 프로젝트마다
-// 독립적으로 매겨지는 값이라 프로젝트 id를 키에 꼭 같이 넣습니다.
-const STARRED_STORAGE_PREFIX = "rhh_starred_";
 
 export function HistoryProvider({ children }) {
   const { token } = useAuth();
@@ -102,36 +97,31 @@ export function HistoryProvider({ children }) {
   // 아직이면(null) lastSeenAt 기반 추정치로 대신합니다.
   const newEntryIds = serverAlarmIds ?? localNewEntryIds;
 
-  const [starredIds, setStarredIds] = useState(new Set());
-  useEffect(() => {
-    if (!projectId) {
-      setStarredIds(new Set());
-      return;
-    }
-    try {
-      const raw = localStorage.getItem(STARRED_STORAGE_PREFIX + projectId);
-      setStarredIds(raw ? new Set(JSON.parse(raw)) : new Set());
-    } catch {
-      setStarredIds(new Set());
-    }
-  }, [projectId]);
+  // 중요 표시(⭐)는 서버(tb_history_starred, 로그인한 사용자 본인만의 값)가
+  // 진실 값입니다 — GET /api/history 가 내려주는 entry.important 를 그대로
+  // 반영합니다. 낙관적으로 먼저 반영하고, 실패하면(예: 이 프로젝트에 아직
+  // tb_history_starred 테이블이 없는 경우) 원래 상태로 되돌립니다.
+  const starredIds = useMemo(
+    () => new Set(entries.filter((entry) => entry.important).map((entry) => entry.id)),
+    [entries],
+  );
 
   const toggleStar = useCallback(
     (id) => {
       if (!projectId) return;
-      setStarredIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        try {
-          localStorage.setItem(STARRED_STORAGE_PREFIX + projectId, JSON.stringify([...next]));
-        } catch {
-          // localStorage를 쓸 수 없는 환경이면 이번 세션에서만 기억됩니다.
-        }
-        return next;
+      const target = entries.find((entry) => entry.id === id);
+      if (!target) return;
+      const nextImportant = !target.important;
+      setEntries((prev) =>
+        prev.map((entry) => (entry.id === id ? { ...entry, important: nextImportant } : entry)),
+      );
+      setImportant(token, projectId, id, nextImportant).catch(() => {
+        setEntries((prev) =>
+          prev.map((entry) => (entry.id === id ? { ...entry, important: !nextImportant } : entry)),
+        );
       });
     },
-    [projectId],
+    [projectId, token, entries],
   );
 
   // "다시 시도"를 연달아 누르는 경우 등, 늦게 도착한 이전 요청의 결과가 최신 결과를

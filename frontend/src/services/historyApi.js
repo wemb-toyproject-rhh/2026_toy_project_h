@@ -58,6 +58,17 @@ export async function deleteEntryPermanently(token, projectId, id) {
   return res.json();
 }
 
+// PUT /api/history/:id/important?projectId= — 로그인한 사용자 본인만의 중요 표시(⭐) 토글.
+export async function setImportant(token, projectId, id, important) {
+  const res = await fetch(`${BASE}/${id}/important?projectId=${encodeURIComponent(projectId)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ important }),
+  });
+  if (!res.ok) throw await parseErrorResponse(res, "중요 표시를 변경하지 못했습니다");
+  return res.json();
+}
+
 // DELETE /api/history/trash?projectId= — 휴지통 비우기(hidden=true 전체 영구 삭제).
 export async function emptyTrash(token, projectId) {
   const res = await fetch(`${BASE}/trash?projectId=${encodeURIComponent(projectId)}`, {
