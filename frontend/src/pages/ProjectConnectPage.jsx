@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useProjects } from "../context/ProjectContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { testConnection } from "../services/projectApi.js";
+import BackLink from "../components/common/BackLink.jsx";
 import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
 import PasswordInput from "../components/common/PasswordInput.jsx";
@@ -347,6 +348,9 @@ export default function ProjectConnectPage() {
     <div className={styles.screen}>
       <div className={styles.layout}>
         <div className={styles.formColumn}>
+        <div className={styles.backRow}>
+          <BackLink aria-label="이전 페이지" title="이전 페이지">{""}</BackLink>
+        </div>
         <form className={styles.card} onSubmit={handleSubmit} ref={formRef}>
           <span className={styles.brand}>RHH</span>
           <div className={styles.titleRow} ref={helpWrapRef}>
@@ -481,9 +485,6 @@ export default function ProjectConnectPage() {
           )}
 
           <div className={styles.actions}>
-            <Button type="button" variant="default" onClick={() => navigate(-1)}>
-              취소
-            </Button>
             <Button
               type="submit"
               variant="primary"
