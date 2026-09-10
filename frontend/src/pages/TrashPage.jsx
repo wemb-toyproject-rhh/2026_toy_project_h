@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useHistory } from "../context/HistoryContext.jsx";
 import { useProjects } from "../context/ProjectContext.jsx";
 import {
   fetchTrashEntries,
@@ -18,6 +19,7 @@ export default function TrashPage() {
   const { token } = useAuth();
   const { currentProject } = useProjects();
   const projectId = currentProject?.id ?? null;
+  const { reload: reloadHistoryList } = useHistory();
 
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +57,8 @@ export default function TrashPage() {
     try {
       await updateHistoryMetadata(token, projectId, id, { hidden: false });
       setEntries((prev) => prev.filter((entry) => entry.id !== id));
+      // 복원된 항목이 폴링 주기(20초)를 기다리지 않고 바로 이력 목록에 보이도록 즉시 새로고침합니다.
+      reloadHistoryList();
     } catch (err) {
       setToastMessage(err.message || "복원에 실패했습니다");
     } finally {
