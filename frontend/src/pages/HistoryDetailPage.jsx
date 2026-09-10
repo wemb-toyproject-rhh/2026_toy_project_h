@@ -23,9 +23,14 @@ import styles from "./HistoryDetailPage.module.css";
 export default function HistoryDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { entries, loading, error, reload, updateMetadata } = useHistory();
+  const { entries, loading, error, reload, updateMetadata, checkEntrySeen } = useHistory();
   const { currentProject } = useProjects();
   const entry = getEntryById(entries, id);
+
+  // 상세 화면에 들어오면 그 이력을 "확인함"으로 표시합니다.
+  useEffect(() => {
+    if (entry?.id) checkEntrySeen(entry.id);
+  }, [entry?.id, checkEntrySeen]);
 
   // 이력 id는 프로젝트(대상 DB)별로 매겨지는 값이라, 이 화면을 보다가 다른
   // 프로젝트로 바꾸면 지금 id는 새 프로젝트에서 의미가 없어집니다(운 나쁘면

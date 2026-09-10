@@ -19,7 +19,7 @@ function formatVersionMeta(entry) {
 export default function CompareHistoryPage() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { entries, loading, error, reload } = useHistory();
+  const { entries, loading, error, reload, checkEntrySeen } = useHistory();
   const { currentProject } = useProjects();
 
   // 이력 id는 프로젝트(대상 DB)별로 매겨지는 값이라, 이 화면을 보다가 다른
@@ -41,6 +41,12 @@ export default function CompareHistoryPage() {
   const entryA = getEntryById(entries, idA);
   const entryB = getEntryById(entries, idB);
   const bothLoaded = Boolean(entryA && entryB);
+
+  // Diff로 비교 중인 두 이력 모두 "확인함"으로 표시합니다.
+  useEffect(() => {
+    if (entryA?.id) checkEntrySeen(entryA.id);
+    if (entryB?.id) checkEntrySeen(entryB.id);
+  }, [entryA?.id, entryB?.id, checkEntrySeen]);
 
   // The right pane always shows the more recently saved entry, so the diff
   // (deletions on the left, additions on the right) reads chronologically
