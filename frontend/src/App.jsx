@@ -4,11 +4,13 @@ import HeaderLayout from "./components/common/HeaderLayout.jsx";
 import RequireAuth from "./components/common/RequireAuth.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import SignupPage from "./pages/SignupPage.jsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ProjectConnectPage from "./pages/ProjectConnectPage.jsx";
 import AccountSettingsPage from "./pages/AccountSettingsPage.jsx";
 import HistoryListPage from "./pages/HistoryListPage.jsx";
 import HistoryDetailPage from "./pages/HistoryDetailPage.jsx";
 import CompareHistoryPage from "./pages/CompareHistoryPage.jsx";
+import TrashPage from "./pages/TrashPage.jsx";
 
 // 이력 화면(/, /history/:id, /compare)도 이제 로그인 + 프로젝트 선택이 필요합니다 —
 // 백엔드가 "선택된 프로젝트가 가리키는 대상 DB"에서 이력을 조회하는 방식으로
@@ -18,6 +20,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/connect" element={<ProjectConnectPage />} />
         <Route element={<HeaderLayout />}>
@@ -27,6 +30,7 @@ export default function App() {
           <Route path="/" element={<HistoryListPage />} />
           <Route path="/history/:id" element={<HistoryDetailPage />} />
           <Route path="/compare" element={<CompareHistoryPage />} />
+          <Route path="/trash" element={<TrashPage />} />
         </Route>
       </Route>
     </Routes>

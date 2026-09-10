@@ -45,6 +45,9 @@ export default function NotificationBell() {
       .slice(0, MAX_ITEMS);
   }, [entries, newEntryIds]);
 
+  // 패널엔 최대 MAX_ITEMS개만 보여주지만, 뱃지 숫자는 실제 새 이력 전체 개수입니다.
+  const unreadCount = newEntryIds?.size ?? 0;
+
   return (
     <div className={styles.wrap} ref={wrapRef}>
       <button
@@ -57,6 +60,9 @@ export default function NotificationBell() {
         onClick={() => setOpen((v) => !v)}
       >
         <Icon name="bell" size={17} />
+        {unreadCount > 0 && (
+          <span className={styles.badge}>{unreadCount > 99 ? "99+" : unreadCount}</span>
+        )}
       </button>
 
       {open && (

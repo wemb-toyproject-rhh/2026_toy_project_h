@@ -46,7 +46,19 @@ export default function LoginPage() {
         <h1 className={styles.title}>RENOBIT History Hub</h1>
         <p className={styles.subtitle}>계정으로 로그인하세요</p>
 
-        {error && <p className={styles.error}>{error}</p>}
+        {error && (
+          <p className={styles.error}>
+            {error}
+            <br />
+            <button
+              type="button"
+              className={styles.forgotLink}
+              onClick={() => navigate("/reset-password", { state: { userId } })}
+            >
+              비밀번호를 잊으셨나요?
+            </button>
+          </p>
+        )}
 
         <label className={styles.field}>
           <span className={styles.label}>아이디</span>

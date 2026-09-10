@@ -13,8 +13,17 @@ const PAGE_SIZE = 24;
 const UNDO_GRACE_MS = 4000;
 
 export default function HistoryListPage() {
-  const { entries: allEntries, loading, error, reload, updateMetadata, hasProject, newEntryIds } =
-    useHistory();
+  const {
+    entries: allEntries,
+    loading,
+    error,
+    reload,
+    updateMetadata,
+    hasProject,
+    newEntryIds,
+    starredIds,
+    toggleStar,
+  } = useHistory();
   const { currentProject } = useProjects();
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,7 +61,7 @@ export default function HistoryListPage() {
       setEditingTitleId(null);
       setSearchParams(prev => {
         const next = new URLSearchParams(prev);
-        ["target", "q", "from", "to", "types", "sort"].forEach(key => next.delete(key));
+        ["target", "q", "from", "to", "types", "sort", "important"].forEach(key => next.delete(key));
         return next;
       });
     }
@@ -135,6 +144,7 @@ export default function HistoryListPage() {
     : null;
 
   const sortOrder = searchParams.get("sort") === "asc" ? "asc" : "desc";
+  const importantFirst = searchParams.get("important") === "1";
   const searchQuery = searchParams.get("q") ?? "";
   const dateFrom = searchParams.get("from") ?? "";
   const dateTo = searchParams.get("to") ?? "";
@@ -184,10 +194,28 @@ export default function HistoryListPage() {
     }
 
     return [...list].sort((a, b) => {
+      // "중요 먼저"는 날짜 정렬을 대체하지 않고 그 위에 얹는 1차 기준입니다 —
+      // 중요 표시된 것끼리, 안 된 것끼리는 여전히 선택된 최신순/오래된순을 따릅니다.
+      if (importantFirst) {
+        const aStarred = starredIds.has(a.id) ? 0 : 1;
+        const bStarred = starredIds.has(b.id) ? 0 : 1;
+        if (aStarred !== bStarred) return aStarred - bStarred;
+      }
       const diff = new Date(a.savedAtRaw) - new Date(b.savedAtRaw);
       return sortOrder === "asc" ? diff : -diff;
     });
-  }, [allEntries, pendingHideIds, targetId, searchQuery, dateFrom, dateTo, sortOrder, activeTypes]);
+  }, [
+    allEntries,
+    pendingHideIds,
+    targetId,
+    searchQuery,
+    dateFrom,
+    dateTo,
+    sortOrder,
+    importantFirst,
+    starredIds,
+    activeTypes,
+  ]);
 
   // 무한 스크롤: 필터링/정렬된 결과가 아무리 많아도 한 번에 PAGE_SIZE개만 렌더링하고,
   // 목록 아래쪽 sentinel이 보이면 더 불러옵니다. entries 자체가 바뀌면(필터/정렬/재조회)
@@ -241,6 +269,8 @@ export default function HistoryListPage() {
   };
   const toggleSortOrder = () =>
     updateParams({ sort: sortOrder === "desc" ? "asc" : null });
+  const toggleImportantFirst = () =>
+    updateParams({ important: importantFirst ? null : "1" });
 
   const selectedTargetId =
     selectedIds.length > 0
@@ -479,6 +509,16 @@ export default function HistoryListPage() {
               {sortOrder === "desc" ? "최신순" : "오래된순"}
             </span>
           </button>
+          <button
+            type="button"
+            className={`${styles.starToggle} ${importantFirst ? styles.active : ""}`}
+            onClick={toggleImportantFirst}
+            aria-pressed={importantFirst}
+            title="중요 표시된 이력을 먼저 보기"
+          >
+            <Icon name="star" size={13} filled={importantFirst} />
+            <span className={styles.sortLabel}>중요</span>
+          </button>
         </div>
 
         {!loading && !hasProject && (
@@ -538,6 +578,8 @@ export default function HistoryListPage() {
               isEditingTitle={editingTitleId === item.id}
               onTitleEditingChange={setEditingTitleId}
               isNew={newEntryIds.has(item.id)}
+              isStarred={starredIds.has(item.id)}
+              onToggleStar={toggleStar}
             />
           ))}
           {!loading && visibleCount < entries.length && (
