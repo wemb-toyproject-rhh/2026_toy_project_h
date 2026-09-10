@@ -82,14 +82,15 @@ export default function TrashPage() {
     }
   };
 
-  const handleEmptyTrash = async () => {
+  const [confirmEmptyOpen, setConfirmEmptyOpen] = useState(false);
+
+  const handleEmptyTrash = () => {
     if (entries.length === 0) return;
-    if (
-      !window.confirm(
-        `휴지통을 비우면 ${entries.length}개 이력이 전부 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 계속할까요?`,
-      )
-    )
-      return;
+    setConfirmEmptyOpen(true);
+  };
+
+  const confirmEmptyTrash = async () => {
+    setConfirmEmptyOpen(false);
     setEmptying(true);
     try {
       await emptyTrash(token, projectId);
@@ -193,6 +194,16 @@ export default function TrashPage() {
         danger
         onConfirm={confirmDeletePermanently}
         onCancel={() => setConfirmDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmEmptyOpen}
+        title="휴지통 비우기"
+        message={`휴지통을 비우면 ${entries.length}개 이력이 전부 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 계속할까요?`}
+        confirmLabel="비우기"
+        danger
+        onConfirm={confirmEmptyTrash}
+        onCancel={() => setConfirmEmptyOpen(false)}
       />
     </div>
   );
