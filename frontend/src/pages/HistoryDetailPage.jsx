@@ -174,7 +174,7 @@ export default function HistoryDetailPage() {
   }
 
   const note = {
-    summary: entry.comment || "작성된 설명이 없습니다.",
+    summary: entry.comment || "작성된 메모가 없습니다.",
     raw: entry.comment ?? "",
   };
 
