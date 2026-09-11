@@ -34,6 +34,7 @@ export default function HistoryListPage() {
   const navigate = useNavigate();
   const [filterOpen, setFilterOpen] = useState(false);
   const filterWrapRef = useRef(null);
+  const searchInputRef = useRef(null);
   // 카드가 여러 개라 한 번에 하나의 제목만 수정 모드로 열리게 합니다 — 새로 열면
   // 이전에 열려 있던 카드는 저장 없이(취소와 동일하게) 자동으로 닫힙니다.
   const [editingTitleId, setEditingTitleId] = useState(null);
@@ -200,6 +201,16 @@ export default function HistoryListPage() {
     setVisibleCount(PAGE_SIZE);
   }, [entries]);
 
+  // 키보드로 카드 사이를 이동할 때 쓰는 포커스 인덱스입니다. 실제 이동은
+  // PRCard의 focused prop이 DOM 포커스를 옮기는 방식으로 이뤄집니다(그 div가
+  // 이미 role="link"/Enter 처리를 갖고 있어서 그대로 재사용). 필터/정렬이
+  // 바뀌어 목록이 다시 구성되면 낡은 인덱스가 엉뚱한 카드를 가리킬 수 있어
+  // 초기화합니다.
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [entries]);
+
   useEffect(() => {
     const root = listRef.current;
     const sentinel = sentinelRef.current;
@@ -218,6 +229,28 @@ export default function HistoryListPage() {
   }, [entries.length]);
 
   const visibleEntries = entries.slice(0, visibleCount);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const target = e.target;
+      const isTyping =
+        target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+      if (isTyping) return;
+
+      if (e.key === "/") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        setFocusedIndex((prev) => Math.min(prev + 1, visibleEntries.length - 1));
+      } else if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setFocusedIndex((prev) => Math.max(prev - 1, 0));
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [visibleEntries.length]);
 
   const hasDateFilter = Boolean(dateFrom || dateTo);
   const hasTypeFilter = activeTypes.length > 0;
@@ -285,6 +318,7 @@ export default function HistoryListPage() {
         <span className={styles.searchDivider} />
 
         <input
+          ref={searchInputRef}
           type="text"
           className={styles.searchInput}
           placeholder="컴포넌트명, 제목, 작성자로 검색..."
@@ -535,7 +569,7 @@ export default function HistoryListPage() {
         )}
 
         <div className={styles.list} ref={listRef}>
-          {hasProject && !error && !loading && visibleEntries.map(item => (
+          {hasProject && !error && !loading && visibleEntries.map((item, index) => (
             <PRCard
               key={item.id}
               item={item}
@@ -552,6 +586,7 @@ export default function HistoryListPage() {
               isNew={newEntryIds.has(item.id)}
               isStarred={starredIds.has(item.id)}
               onToggleStar={toggleStar}
+              focused={index === focusedIndex}
             />
           ))}
           {!loading && visibleCount < entries.length && (

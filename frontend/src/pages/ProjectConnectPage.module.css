@@ -27,10 +27,20 @@
 }
 
 .formColumn {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
+}
+
+/* 문서 흐름에서 빼서 카드 위에 떠 있게 합니다 — 그래야 이 자리를 차지해서
+   카드가 갤러리 패널보다 아래로 밀리는 일 없이 둘의 높이(윗변)가 맞습니다. */
+.backRow {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
 }
 
 .galleryToggle {

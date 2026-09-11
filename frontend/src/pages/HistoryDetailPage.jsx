@@ -62,6 +62,30 @@ export default function HistoryDetailPage() {
   const newerEntry =
     siblingIndex >= 0 && siblingIndex < siblings.length - 1 ? siblings[siblingIndex + 1] : null;
 
+  // 키보드 단축키: [ / ]로 이전/다음 이력, s로 중요 표시, Esc/Backspace로 목록
+  // 복귀(BackLink와 동일하게 navigate(-1) — 이전/다음 이동이 replace라서 몇 번을
+  // 오가든 항상 원래 목록으로 돌아갑니다).
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const target = e.target;
+      const isTyping =
+        target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+      if (isTyping) return;
+
+      if (e.key === "[" && olderEntry) {
+        navigate(`/history/${olderEntry.id}`, { replace: true });
+      } else if (e.key === "]" && newerEntry) {
+        navigate(`/history/${newerEntry.id}`, { replace: true });
+      } else if ((e.key === "s" || e.key === "S") && entry) {
+        toggleStar(entry.id);
+      } else if (e.key === "Escape" || e.key === "Backspace") {
+        navigate(-1);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [olderEntry, newerEntry, entry, navigate, toggleStar]);
+
   const [activePrimaryId, setActivePrimaryId] = useState(null);
   const [activeSubId, setActiveSubId] = useState(null);
 
@@ -150,7 +174,7 @@ export default function HistoryDetailPage() {
   }
 
   const note = {
-    summary: entry.comment || "작성된 설명이 없습니다.",
+    summary: entry.comment || "작성된 메모가 없습니다.",
     raw: entry.comment ?? "",
   };
 
