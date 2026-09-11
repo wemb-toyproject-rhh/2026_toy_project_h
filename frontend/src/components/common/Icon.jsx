@@ -210,9 +210,9 @@ const ICONS = {
   ),
   help: (
     <>
-      <circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <circle cx="8" cy="5.1" r="0.9" fill="currentColor" />
-      <path d="M8 7.6v4.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <circle cx="8" cy="8" r="6.8" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="8" cy="4.9" r="0.95" fill="currentColor" />
+      <path d="M8 7.4v4.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     </>
   ),
   settings: (
