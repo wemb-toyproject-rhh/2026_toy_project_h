@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Badge from "../common/Badge.jsx";
 import Button from "../common/Button.jsx";
@@ -18,9 +19,17 @@ export default function PRCard({
   isNew = false,
   isStarred = false,
   onToggleStar,
+  focused = false,
 }) {
   const navigate = useNavigate();
   const toggleBlocked = !selected && selectionDisabled;
+  const bodyRef = useRef(null);
+
+  // 목록 화면의 j/k 키보드 이동이 실제 DOM 포커스를 옮겨서 켜집니다 — 이 div가
+  // 이미 role="link"/tabIndex/Enter 처리를 갖고 있어서 별도 로직 없이 재사용합니다.
+  useEffect(() => {
+    if (focused) bodyRef.current?.focus();
+  }, [focused]);
 
   const handleToggle = () => {
     if (toggleBlocked) return;
@@ -60,6 +69,7 @@ export default function PRCard({
       </div>
 
       <div
+        ref={bodyRef}
         className={styles.body}
         role="link"
         tabIndex={0}
