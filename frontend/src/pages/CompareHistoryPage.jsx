@@ -74,17 +74,41 @@ export default function CompareHistoryPage() {
   const [activePrimaryId, setActivePrimaryId] = useState(null);
   const [activeSubId, setActiveSubId] = useState(null);
 
+  // entry.primaryTabs[].modified / entry.lifecycles[].modified는 "그 이력 자신의
+  // 바로 이전 버전과 비교했을 때" 기준이라, 여기서 실제로 비교 중인 두 버전이
+  // 인접하지 않으면(버전을 건너뛰고 골랐으면) 의미가 달라집니다 — 지금 두 버전
+  // 사이의 진짜 차이를 다시 계산해서 빨간 점/기본 탭 선택에 씁니다.
+  const comparedPrimaryTabs = useMemo(() => {
+    if (!bothLoaded) return [];
+    return olderVersion.primaryTabs.map((tab) => ({
+      ...tab,
+      modified: tab.hasSubTabs
+        ? olderVersion.lifecycles.some(
+            (lc) => getTabContent(olderVersion, tab.id, lc.id) !== getTabContent(newerVersion, tab.id, lc.id),
+          )
+        : getTabContent(olderVersion, tab.id, null) !== getTabContent(newerVersion, tab.id, null),
+    }));
+  }, [olderVersion, newerVersion, bothLoaded]);
+
+  const comparedLifecycles = useMemo(() => {
+    if (!bothLoaded) return [];
+    return olderVersion.lifecycles.map((lc) => ({
+      ...lc,
+      modified: getTabContent(olderVersion, "js", lc.id) !== getTabContent(newerVersion, "js", lc.id),
+    }));
+  }, [olderVersion, newerVersion, bothLoaded]);
+
   // olderVersion arrives asynchronously (fetched from the API), so the
   // default tab is picked once here rather than as a useState initializer.
   useEffect(() => {
     if (!olderVersion || activePrimaryId) return;
     setActivePrimaryId(
-      olderVersion.primaryTabs.find((tab) => tab.modified)?.id
-        ?? olderVersion.primaryTabs.find((tab) => tab.hasSubTabs)?.id
-        ?? olderVersion.primaryTabs[0]?.id,
+      comparedPrimaryTabs.find((tab) => tab.modified)?.id
+        ?? comparedPrimaryTabs.find((tab) => tab.hasSubTabs)?.id
+        ?? comparedPrimaryTabs[0]?.id,
     );
-    setActiveSubId(olderVersion.lifecycles.find((lc) => lc.modified)?.id ?? olderVersion.lifecycles[0]?.id);
-  }, [olderVersion, activePrimaryId]);
+    setActiveSubId(comparedLifecycles.find((lc) => lc.modified)?.id ?? comparedLifecycles[0]?.id);
+  }, [olderVersion, activePrimaryId, comparedPrimaryTabs, comparedLifecycles]);
 
   const codeOld = useMemo(
     () => (olderVersion ? getTabContent(olderVersion, activePrimaryId, activeSubId) : ""),
@@ -156,8 +180,8 @@ export default function CompareHistoryPage() {
       </div>
 
       <SubTabGroup
-        primaryTabs={olderVersion.primaryTabs}
-        lifecycles={olderVersion.lifecycles}
+        primaryTabs={comparedPrimaryTabs}
+        lifecycles={comparedLifecycles}
         activePrimaryId={activePrimaryId}
         activeSubId={activeSubId}
         onPrimaryChange={setActivePrimaryId}
