@@ -2,7 +2,9 @@
 // tb_alarm_check 테이블을 배포하기 전이라 지금은 항상 실패(404 등)합니다 — 호출하는 쪽
 // (HistoryContext)이 실패를 조용히 잡아서 기존 로컬 추정 방식으로 대체하므로, 배포 전에도
 // 화면이 깨지지 않습니다. 배포되면 별도 프론트 수정 없이 그대로 동작합니다.
-const BASE = "/api/alarms";
+import { API_ORIGIN } from "./apiBase.js";
+
+const BASE = `${API_ORIGIN}/api/alarms`;
 
 function authHeaders(token) {
   return { Authorization: `Bearer ${token}` };
