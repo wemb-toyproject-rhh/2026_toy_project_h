@@ -167,6 +167,10 @@ export function HistoryProvider({ children }) {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
+    // 이력만 새로 받아오고 미확인 목록(serverAlarmIds)은 다음 20초 폴링을 기다리면,
+    // 방금 들어온 이력이 "새 이력" 배지 없이 보이다가 한참 뒤에야 배지가 붙는
+    // 것처럼 보입니다 — 수동 새로고침 때도 같이 갱신합니다.
+    refreshAlarms();
     fetchHistoryEntries(token, projectId)
       .then((data) => {
         if (requestIdRef.current !== requestId) return;
@@ -182,7 +186,7 @@ export function HistoryProvider({ children }) {
         if (requestIdRef.current !== requestId) return;
         setLoading(false);
       });
-  }, [token, projectId, projectsLoading]);
+  }, [token, projectId, projectsLoading, refreshAlarms]);
 
   useEffect(() => {
     reload();
