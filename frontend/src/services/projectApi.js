@@ -1,5 +1,7 @@
 // RHH 프로젝트 CRUD. 전부 로그인 토큰이 있어야 호출할 수 있습니다 (requireAuth).
-const BASE = "/api/rhh/projects";
+import { API_ORIGIN } from "./apiBase.js";
+
+const BASE = `${API_ORIGIN}/api/rhh/projects`;
 
 function authHeaders(token) {
   return { Authorization: `Bearer ${token}` };

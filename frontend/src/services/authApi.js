@@ -1,4 +1,6 @@
-const BASE = "/api/rhh";
+import { API_ORIGIN } from "./apiBase.js";
+
+const BASE = `${API_ORIGIN}/api/rhh`;
 
 export async function register(userId, password) {
   const res = await fetch(`${BASE}/users`, {
