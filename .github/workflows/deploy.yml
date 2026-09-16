@@ -25,6 +25,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # 실제 백엔드 주소가 정해지면 코드 수정 없이 GitHub 저장소의
+          # Settings → Secrets and variables → Actions → Variables 에서
+          # VITE_API_BASE_URL 값만 채워 넣으면 다음 배포부터 반영됩니다.
+          # 비어 있으면 지금처럼 상대경로("/api/...")로 빌드됩니다.
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

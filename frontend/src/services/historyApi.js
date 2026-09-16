@@ -1,4 +1,6 @@
-const BASE = "/api/history";
+import { API_ORIGIN } from "./apiBase.js";
+
+const BASE = `${API_ORIGIN}/api/history`;
 
 function authHeaders(token) {
   return { Authorization: `Bearer ${token}` };
