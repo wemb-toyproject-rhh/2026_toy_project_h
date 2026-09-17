@@ -6,7 +6,7 @@
 // 조인 한 번으로 끝납니다.
 //
 //   CREATE TABLE tb_history_starred (
-//     user_id    INTEGER NOT NULL,
+//     user_id    VARCHAR(1000) NOT NULL,  -- tb_user_rhh.user_id 와 같은 문자열
 //     hist_type  VARCHAR(10) NOT NULL,   -- 'page' | 'inst' (entries.js 의 id 접두사와 동일)
 //     hist_id    INTEGER NOT NULL,
 //     PRIMARY KEY (user_id, hist_type, hist_id)
@@ -53,4 +53,45 @@ export async function setStarred({ userId, id, starred, query: runQuery = defaul
     );
   }
   return true;
+}
+
+// 이력이 영구 삭제될 때 그 이력을 가리키던 중요 표시를 같이 지웁니다. hist_id는
+// 삭제되고 나면 다시는 안 쓰이는 번호라, user_id로 좁히지 않고 그 (hist_type, hist_id)를
+// 가리키던 행 전부(=중요 표시해뒀던 모든 사용자 몫)를 지웁니다 — 안 그러면 이미 없는
+// 이력을 가리키는 고아 row로 테이블에 계속 남습니다.
+// tb_history_starred 가 없는 프로젝트에서도 삭제 자체(핵심 기능)는 계속 성공해야 하므로
+// 여기서 실패를 삼킵니다.
+export async function deleteStarredForHist({ histType, histId, query: runQuery = defaultQuery }) {
+  try {
+    await runQuery(`DELETE FROM tb_history_starred WHERE hist_type = $1 AND hist_id = $2`, [
+      histType,
+      histId,
+    ]);
+  } catch (err) {
+    console.warn("[deleteStarredForHist] 정리 실패(무시하고 계속):", err.message);
+  }
+}
+
+// 위와 같은 정리를, "휴지통 비우기"처럼 한 번에 여러 이력이 삭제될 때 쓰는 버전입니다.
+// entries: [{ histType, histId }, ...]
+export async function deleteStarredForHists({ entries, query: runQuery = defaultQuery }) {
+  if (!entries || entries.length === 0) return;
+  try {
+    const pageIds = entries.filter((e) => e.histType === "page").map((e) => e.histId);
+    const instIds = entries.filter((e) => e.histType === "inst").map((e) => e.histId);
+    if (pageIds.length > 0) {
+      await runQuery(
+        `DELETE FROM tb_history_starred WHERE hist_type = 'page' AND hist_id = ANY($1::int[])`,
+        [pageIds],
+      );
+    }
+    if (instIds.length > 0) {
+      await runQuery(
+        `DELETE FROM tb_history_starred WHERE hist_type = 'inst' AND hist_id = ANY($1::int[])`,
+        [instIds],
+      );
+    }
+  } catch (err) {
+    console.warn("[deleteStarredForHists] 정리 실패(무시하고 계속):", err.message);
+  }
 }
