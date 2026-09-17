@@ -14,8 +14,14 @@ import "dotenv/config";
 import express from "express";
 import { query } from "./db.js";
 import { getAllEntries, getEntryById } from "./entries.js";
-import { getUnreadEntries, checkEntry, checkAllEntries } from "./alarms.js";
-import { getStarredIds, setStarred } from "./flags.js";
+import {
+  getUnreadEntries,
+  checkEntry,
+  checkAllEntries,
+  deleteCheckedForHist,
+  deleteCheckedForHists,
+} from "./alarms.js";
+import { getStarredIds, setStarred, deleteStarredForHist, deleteStarredForHists } from "./flags.js";
 import { hashPassword, verifyPassword, issueToken, requireAuth } from "./auth.js";
 import { getProjectPool, testConnection } from "./projectPool.js";
 
@@ -181,6 +187,18 @@ app.delete("/api/history/trash", requireAuth, async (req, res) => {
       runQuery(`DELETE FROM tb_page_hist WHERE hidden = true RETURNING hist_id`),
       runQuery(`DELETE FROM tb_instance_hist WHERE hidden = true RETURNING hist_id`),
     ]);
+
+    // 방금 지운 이력들을 가리키던 중요 표시/알람 확인 기록도 같이 정리합니다 —
+    // 안 그러면 이미 없는 hist_id를 가리키는 고아 row로 계속 남습니다.
+    const deletedEntries = [
+      ...pageResult.rows.map((row) => ({ histType: "page", histId: row.hist_id })),
+      ...instResult.rows.map((row) => ({ histType: "inst", histId: row.hist_id })),
+    ];
+    await Promise.all([
+      deleteStarredForHists({ entries: deletedEntries, query: runQuery }),
+      deleteCheckedForHists({ entries: deletedEntries, query: runQuery }),
+    ]);
+
     res.json({ deleted: pageResult.rowCount + instResult.rowCount });
   } catch (err) {
     console.error("[DELETE /api/history/trash]", err.message);
@@ -203,13 +221,23 @@ app.delete("/api/history/:id", requireAuth, async (req, res) => {
 
   try {
     const pool = getProjectPool(project);
-    const result = await pool.query(
+    const runQuery = (text, params) => pool.query(text, params);
+    const result = await runQuery(
       `DELETE FROM ${parsed.table} WHERE hist_id = $1 AND hidden = true RETURNING hist_id`,
       [parsed.histId],
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: `휴지통에서 이력을 찾을 수 없습니다 (id=${req.params.id})` });
     }
+
+    // 방금 지운 이력을 가리키던 중요 표시/알람 확인 기록도 같이 정리합니다 —
+    // 안 그러면 이미 없는 hist_id를 가리키는 고아 row로 계속 남습니다.
+    const histType = parsed.table === "tb_page_hist" ? "page" : "inst";
+    await Promise.all([
+      deleteStarredForHist({ histType, histId: parsed.histId, query: runQuery }),
+      deleteCheckedForHist({ histType, histId: parsed.histId, query: runQuery }),
+    ]);
+
     res.json({ id: req.params.id });
   } catch (err) {
     console.error("[DELETE /api/history/:id]", err.message);
