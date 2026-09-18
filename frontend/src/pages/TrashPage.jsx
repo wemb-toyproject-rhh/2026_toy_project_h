@@ -19,7 +19,7 @@ export default function TrashPage() {
   const { token } = useAuth();
   const { currentProject } = useProjects();
   const projectId = currentProject?.id ?? null;
-  const { reload: reloadHistoryList } = useHistory();
+  const { reload: reloadHistoryList, flushPendingHides } = useHistory();
 
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +49,20 @@ export default function TrashPage() {
   }, [token, projectId]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    // 이력 리스트에서 "이력 삭제"를 누르고 유예시간(4초)이 끝나기 전에 바로
+    // 휴지통으로 넘어오면, 그 숨김 처리 요청이 아직 안 끝났을 수 있습니다 —
+    // 이 목록을 불러오기 전에 그 처리가 끝나길 기다려서 "방금 지운 게 휴지통에
+    // 안 보이는" 순서 문제를 막습니다. 기다릴 게 없으면 즉시 통과합니다.
+    let cancelled = false;
+    // 숨김 처리 자체가 실패해도(네트워크 오류 등) 휴지통 목록은 반드시 불러와야
+    // 하므로, 실패 여부와 무관하게 항상 load()를 호출합니다.
+    flushPendingHides().finally(() => {
+      if (!cancelled) load();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [load, flushPendingHides]);
 
   const handleRestore = async (id) => {
     setBusyId(id);
