@@ -257,6 +257,17 @@ export function HistoryProvider({ children }) {
           ? prev.filter((entry) => entry.id !== id)
           : prev.map((entry) => (entry.id === id ? updated : entry)),
       );
+      // 삭제한 이력이 "새 이력"으로 잡혀 있었다면, 다음 폴링을 기다리지 않고
+      // 알림 배지에서도 바로 빼줍니다 — 안 그러면 목록에선 이미 사라졌는데
+      // 배지 숫자만 그대로 남아있는 것처럼 보입니다.
+      if (updated.hidden) {
+        setServerAlarmIds((prev) => {
+          if (!prev || !prev.has(id)) return prev;
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
     },
     [token, projectId],
   );
