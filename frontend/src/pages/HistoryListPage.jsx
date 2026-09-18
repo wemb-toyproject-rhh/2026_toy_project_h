@@ -120,7 +120,7 @@ export default function HistoryListPage() {
     : null;
 
   const sortOrder = searchParams.get("sort") === "asc" ? "asc" : "desc";
-  const importantFirst = searchParams.get("important") === "1";
+  const importantOnly = searchParams.get("important") === "1";
   const searchQuery = searchParams.get("q") ?? "";
   const dateFrom = searchParams.get("from") ?? "";
   const dateTo = searchParams.get("to") ?? "";
@@ -166,15 +166,11 @@ export default function HistoryListPage() {
         ),
       );
     }
+    if (importantOnly) {
+      list = list.filter(entry => starredIds.has(entry.id));
+    }
 
     return [...list].sort((a, b) => {
-      // "중요 먼저"는 날짜 정렬을 대체하지 않고 그 위에 얹는 1차 기준입니다 —
-      // 중요 표시된 것끼리, 안 된 것끼리는 여전히 선택된 최신순/오래된순을 따릅니다.
-      if (importantFirst) {
-        const aStarred = starredIds.has(a.id) ? 0 : 1;
-        const bStarred = starredIds.has(b.id) ? 0 : 1;
-        if (aStarred !== bStarred) return aStarred - bStarred;
-      }
       const diff = new Date(a.savedAtRaw) - new Date(b.savedAtRaw);
       return sortOrder === "asc" ? diff : -diff;
     });
@@ -185,7 +181,7 @@ export default function HistoryListPage() {
     dateFrom,
     dateTo,
     sortOrder,
-    importantFirst,
+    importantOnly,
     starredIds,
     activeTypes,
   ]);
@@ -263,9 +259,10 @@ export default function HistoryListPage() {
   const typeFilterLabel = activeTypes.map(type => TYPE_LABELS[type]).join(", ");
   const clearDateFilter = () => updateParams({ from: null, to: null });
   const clearTypeFilter = () => updateParams({ types: null });
-  const hasAnyFilter = Boolean(targetId) || hasDateFilter || hasTypeFilter || Boolean(searchQuery.trim());
+  const hasAnyFilter =
+    Boolean(targetId) || hasDateFilter || hasTypeFilter || Boolean(searchQuery.trim()) || importantOnly;
   const clearAllFilters = () =>
-    updateParams({ target: null, q: null, from: null, to: null, types: null });
+    updateParams({ target: null, q: null, from: null, to: null, types: null, important: null });
   const toggleTypeFilter = type => {
     const next = activeTypes.includes(type)
       ? activeTypes.filter(t => t !== type)
@@ -274,8 +271,8 @@ export default function HistoryListPage() {
   };
   const toggleSortOrder = () =>
     updateParams({ sort: sortOrder === "desc" ? "asc" : null });
-  const toggleImportantFirst = () =>
-    updateParams({ important: importantFirst ? null : "1" });
+  const toggleImportantOnly = () =>
+    updateParams({ important: importantOnly ? null : "1" });
 
   const selectedTargetId =
     selectedIds.length > 0
@@ -517,12 +514,12 @@ export default function HistoryListPage() {
           </button>
           <button
             type="button"
-            className={`${styles.starToggle} ${importantFirst ? styles.active : ""}`}
-            onClick={toggleImportantFirst}
-            aria-pressed={importantFirst}
-            title="중요 표시된 이력을 먼저 보기"
+            className={`${styles.starToggle} ${importantOnly ? styles.active : ""}`}
+            onClick={toggleImportantOnly}
+            aria-pressed={importantOnly}
+            title="중요 표시된 이력만 보기"
           >
-            <Icon name="star" size={13} filled={importantFirst} />
+            <Icon name="star" size={13} filled={importantOnly} />
             <span className={styles.sortLabel}>중요</span>
           </button>
         </div>
