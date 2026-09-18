@@ -282,6 +282,14 @@ export function HistoryProvider({ children }) {
   const pendingHideIdsRef = useRef(pendingHideIds);
   pendingHideIdsRef.current = pendingHideIds;
   const pendingHideTimerRef = useRef(null);
+  // 이 화면(이력 리스트)을 벗어날 때 남은 유예시간을 안 기다리고 바로
+  // flushPendingHides를 부르는데, 그 안의 updateMetadata 호출들은 await 없이
+  // 그냥 쏘고 끝내는 방식이라("fire and forget"), 곧바로 휴지통 화면으로
+  // 넘어가면 그 화면의 목록 조회가 이 숨김 처리보다 먼저 끝나버릴 수 있습니다 —
+  // "방금 지운 게 휴지통에 안 보인다"는 가끔 재현되는 버그가 여기서 납니다.
+  // 마지막 flush의 Promise를 들고 있다가, 휴지통 화면이 자기 목록을 불러오기
+  // 전에 이 Promise를 기다리게 해서 순서를 보장합니다.
+  const pendingHideFlushRef = useRef(Promise.resolve());
 
   const flushPendingHides = useCallback(() => {
     if (pendingHideTimerRef.current) {
@@ -289,9 +297,11 @@ export function HistoryProvider({ children }) {
       pendingHideTimerRef.current = null;
     }
     const ids = pendingHideIdsRef.current;
-    if (ids.length === 0) return;
+    if (ids.length === 0) return pendingHideFlushRef.current;
     setPendingHideIds([]);
-    ids.forEach((id) => updateMetadata(id, { hidden: true }));
+    const flush = Promise.all(ids.map((id) => updateMetadata(id, { hidden: true })));
+    pendingHideFlushRef.current = flush;
+    return flush;
   }, [updateMetadata]);
 
   const hidePending = useCallback(
