@@ -32,6 +32,24 @@ export async function testConnection(token, fields) {
   return res.json();
 }
 
+// POST /api/rhh/projects/install-schema — 없는 테이블/트리거만 대상 DB에 생성합니다.
+// dryRun:true 면 실행하지 않고 "무엇을 설치할지"(plan)만 반환합니다. testConnection과
+// 같은 방식으로, 실패해도(400) 서버가 { ok:false, error } 형태의 JSON을 그대로 주므로
+// throw 하지 않고 그 결과를 그대로 반환합니다 — 호출부가 result.ok로 분기합니다.
+export async function installSchema(token, fields, dryRun) {
+  try {
+    const res = await fetch(`${BASE}/install-schema`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(token) },
+      body: JSON.stringify({ ...fields, dryRun }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: false, error: "자동 설치 요청에 실패했습니다", ...data };
+  } catch {
+    return { ok: false, error: "자동 설치 요청에 실패했습니다" };
+  }
+}
+
 export async function createProject(token, fields) {
   const res = await fetch(BASE, {
     method: "POST",

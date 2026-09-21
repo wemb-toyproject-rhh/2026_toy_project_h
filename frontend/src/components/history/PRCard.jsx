@@ -129,7 +129,7 @@ export default function PRCard({
               variant="ghostDanger"
               size="icon"
               aria-label="이력 삭제"
-              title="이력 삭제 (실제로는 숨김 처리되며, 원본 데이터는 삭제되지 않습니다)"
+              title="삭제"
               onClick={(e) => {
                 e.stopPropagation();
                 onHide?.(item.id);
