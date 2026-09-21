@@ -10,7 +10,7 @@ export default function ConversationPanel({ note, onSave }) {
   const [draft, setDraft] = useState(note.raw);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const startEdit = () => {
     setDraft(note.raw);
