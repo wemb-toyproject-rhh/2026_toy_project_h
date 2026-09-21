@@ -11,6 +11,10 @@
   transition: width 0.15s ease;
 }
 
+.sidebar.resizing {
+  transition: none;
+}
+
 .sidebar.collapsed {
   width: 28px;
   padding: 12px 4px;
@@ -48,6 +52,23 @@
 
 .collapseIconExpanded {
   transform: rotate(180deg);
+}
+
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -3px;
+  width: 6px;
+  z-index: 4;
+  cursor: col-resize;
+  background: transparent;
+}
+
+.resizeHandle:hover,
+.resizeHandle:active {
+  background: var(--color-accent);
+  opacity: 0.35;
 }
 
 .list {

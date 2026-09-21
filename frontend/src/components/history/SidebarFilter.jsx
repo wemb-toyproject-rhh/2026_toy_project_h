@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { buildTargetTree, getEntryById } from "../../services/historyAdapter.js";
 import { useHistory } from "../../context/HistoryContext.jsx";
@@ -8,6 +8,10 @@ import DbStatus from "../common/DbStatus.jsx";
 import styles from "./SidebarFilter.module.css";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "rhh_sidebar_collapsed";
+const SIDEBAR_WIDTH_STORAGE_KEY = "rhh_sidebar_width";
+const SIDEBAR_DEFAULT_WIDTH = 300;
+const SIDEBAR_MIN_WIDTH = 220;
+const SIDEBAR_MAX_WIDTH = 480;
 
 export default function SidebarFilter() {
   const [searchParams] = useSearchParams();
@@ -33,6 +37,58 @@ export default function SidebarFilter() {
       // localStorage를 쓸 수 없는 환경(프라이빗 모드 등)이면 그냥 이번 세션에서만 기억합니다.
     }
   }, [sidebarCollapsed]);
+
+  // 사이드바 너비 — 핸들로 드래그해서 조절할 수 있고, 그 값은 기억해둡니다.
+  // --sidebar-width는 헤더 로고 영역, 리스트/휴지통의 플로팅 버튼 위치 등
+  // 이 컴포넌트 바깥의 여러 곳에서도 같이 참조하는 전역 토큰이라, 컴포넌트
+  // 스코프의 인라인 스타일이 아니라 documentElement에 직접 반영합니다.
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    try {
+      const stored = Number(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
+      if (stored >= SIDEBAR_MIN_WIDTH && stored <= SIDEBAR_MAX_WIDTH) return stored;
+    } catch {
+      // ignore
+    }
+    return SIDEBAR_DEFAULT_WIDTH;
+  });
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty("--sidebar-width", `${sidebarWidth}px`);
+    try {
+      localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
+    } catch {
+      // localStorage를 쓸 수 없는 환경이면 이번 세션에서만 기억합니다.
+    }
+  }, [sidebarWidth]);
+
+  // 드래그 중엔 sidebar의 width 트랜지션(접기/펼치기 애니메이션용)을 꺼서, 너비가
+  // 마우스를 따라오다 뒤늦게 도착하는 느낌 없이 1:1로 반응하게 합니다.
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleResizeStart = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handleMove = (moveEvent) => {
+      const next = Math.min(
+        SIDEBAR_MAX_WIDTH,
+        Math.max(SIDEBAR_MIN_WIDTH, startWidth + (moveEvent.clientX - startX)),
+      );
+      setSidebarWidth(next);
+    };
+    const handleUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleUp);
+    };
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleUp);
+  };
 
   // 프로젝트를 바꾸면(=새로운 트리 컨텍스트) 사이드바 자체는 다시 펼쳐서 보여줍니다
   // — 같은 프로젝트 안에서 페이지를 이동하는 것과는 다르게, 새 프로젝트로 왔다는
@@ -98,7 +154,7 @@ export default function SidebarFilter() {
 
   return (
     <aside
-      className={`${styles.sidebar} ${sidebarCollapsed ? styles.collapsed : ""}`}
+      className={`${styles.sidebar} ${sidebarCollapsed ? styles.collapsed : ""} ${isResizing ? styles.resizing : ""}`}
       onClick={sidebarCollapsed ? () => setSidebarCollapsed(false) : undefined}
     >
       <button
@@ -114,6 +170,17 @@ export default function SidebarFilter() {
           className={sidebarCollapsed ? styles.collapseIconCollapsed : styles.collapseIconExpanded}
         />
       </button>
+
+      {!sidebarCollapsed && (
+        <div
+          className={styles.resizeHandle}
+          onMouseDown={handleResizeStart}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="사이드바 너비 조절"
+          title="드래그해서 너비 조절"
+        />
+      )}
 
       {!sidebarCollapsed && (
         <>
