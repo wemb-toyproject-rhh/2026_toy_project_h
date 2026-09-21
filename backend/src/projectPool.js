@@ -3,6 +3,7 @@
 // tb_page_hist / tb_instance_hist 는 사용자가 선택한 프로젝트가 가리키는 DB에 있어서
 // db.js 와 같은 방식(pg.Pool)으로 프로젝트별로 별도 풀을 만들어 재사용합니다.
 import pg from "pg";
+import { buildInstallPlan, runInstallPlan } from "./schemaInstall.js";
 
 const { Pool, Client } = pg;
 
@@ -50,6 +51,8 @@ function describeConnectionError(err) {
       return "연결이 거부되었습니다 (host/port를 확인해 주세요)";
     case "ETIMEDOUT":
       return "연결 시간이 초과되었습니다";
+    case "42501": // insufficient_privilege — 자동 설치 시 읽기 전용 계정 등에서 발생
+      return "테이블/트리거를 생성할 권한이 없는 계정입니다 (DDL 권한이 있는 계정으로 다시 시도해 주세요)";
     default:
       return /^[\x00-\x7F]*$/.test(err.message ?? "")
         ? err.message
@@ -72,12 +75,18 @@ const REQUIRED_TABLES = ["tb_page_hist", "tb_instance_hist"];
 const REQUIRED_TRIGGERS = ["trg_tb_page_hist", "trg_tb_instance_hist"];
 const OPTIONAL_TABLES = ["tb_history_starred", "tb_alarm_check", "tb_history_comment"];
 
+// tb_user_rhh/tb_project_list 는 원래 RHH 관리용 고정 DB에만 있어야 하는 테이블이라
+// "이 대상 DB"에서 확인할 이유가 원래는 없지만, [프로젝트 연결 화면]의 자동 설치가
+// 이 둘도 설치 대상에 포함하기로 해서(schemaInstall.js 참고) 여기서도 존재 여부를
+// 같이 확인합니다.
+const MANAGEMENT_TABLES = ["tb_user_rhh", "tb_project_list"];
+
 // 이미 접속에 성공한 client를 그대로 재사용해서(연결을 또 안 맺음) 테이블/트리거
 // 존재 여부만 조회합니다. 이 조회 자체가 실패해도(예: information_schema 조회
 // 권한이 없는 특수한 계정) 접속 테스트 결과 자체엔 영향 주지 않도록, 호출부에서
 // 실패를 따로 잡습니다.
 async function checkSchema(client) {
-  const tableNames = [...BASE_TABLES, ...REQUIRED_TABLES, ...OPTIONAL_TABLES];
+  const tableNames = [...BASE_TABLES, ...REQUIRED_TABLES, ...OPTIONAL_TABLES, ...MANAGEMENT_TABLES];
   const [tableRes, triggerRes] = await Promise.all([
     client.query(
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ANY($1)`,
@@ -101,7 +110,22 @@ async function checkSchema(client) {
   const optional = {};
   for (const name of OPTIONAL_TABLES) optional[name] = existingTables.has(name);
 
-  return { base, required, optional };
+  const management = {};
+  for (const name of MANAGEMENT_TABLES) management[name] = existingTables.has(name);
+
+  return { base, required, optional, management };
+}
+
+// checkSchema() 결과(required/optional/management)에서 "없는 것"만 true인 하나의
+// 평평한 맵으로 합칩니다 — schemaInstall.js의 buildInstallPlan()이 바로 쓸 수 있는
+// 모양입니다. base(tb_page/tb_instance)는 여기 안 넣습니다 — RHH가 설치할 대상이
+// 아니라서 자동 설치 계획에 절대 포함되면 안 되기 때문입니다.
+function toMissingMap(schema) {
+  const missing = {};
+  for (const [name, exists] of Object.entries(schema.required)) missing[name] = !exists;
+  for (const [name, exists] of Object.entries(schema.optional)) missing[name] = !exists;
+  for (const [name, exists] of Object.entries(schema.management)) missing[name] = !exists;
+  return missing;
 }
 
 async function testConnectionInner({ host, port, database, user, password }) {
@@ -146,6 +170,53 @@ export async function testConnection(config) {
     testConnectionInner(config),
     new Promise((resolve) => {
       setTimeout(() => resolve({ ok: false, error: "연결 시간이 초과되었습니다" }), 3000);
+    }),
+  ]);
+}
+
+// [프로젝트 연결 화면]의 "자동 설치" 버튼용. dryRun=true 면 아무것도 실행하지 않고
+// "무엇을 실행할 예정인지"(plan)만 돌려줍니다 — 확인창에 SQL을 미리 보여주는 용도.
+// dryRun=false(기본)면 실제로 트랜잭션으로 실행합니다.
+//
+// 클라이언트가 보낸 "무엇이 없는지" 정보를 신뢰하지 않고, 여기서 매번 checkSchema()를
+// 다시 실행해서 서버가 직접 확인한 최신 상태로만 설치 계획을 세웁니다.
+async function installSchemaInner({ host, port, database, user, password, dryRun }) {
+  const client = new Client({ host, port, database, user, password, connectionTimeoutMillis: 2000 });
+  try {
+    await client.connect();
+
+    const before = await checkSchema(client);
+    // tb_page/tb_instance(RENOBIT 자체 테이블) 자체가 없으면 그 위에 아무것도 설치할
+    // 수 없습니다 — DDL로 해결할 수 있는 문제가 아니라서 여기서 명확히 거부합니다.
+    if (!before.base.tb_page || !before.base.tb_instance) {
+      return {
+        ok: false,
+        error: "RENOBIT이 설치되지 않은 DB입니다 (tb_page/tb_instance 없음) — 자동 설치할 수 없습니다",
+      };
+    }
+
+    const plan = buildInstallPlan(toMissingMap(before));
+    if (dryRun) {
+      return { ok: true, dryRun: true, plan, schema: before };
+    }
+
+    const installed = await runInstallPlan(client, plan);
+    const after = await checkSchema(client);
+    return { ok: true, dryRun: false, installed, schema: after };
+  } catch (err) {
+    return { ok: false, error: describeConnectionError(err) };
+  } finally {
+    client.end().catch(() => {});
+  }
+}
+
+export async function installSchema(config) {
+  return Promise.race([
+    installSchemaInner(config),
+    new Promise((resolve) => {
+      // DDL 여러 개를 트랜잭션으로 실행하는 거라 단순 SELECT보다 오래 걸릴 수 있어,
+      // 연결 테스트(3초)보다 넉넉하게 잡습니다.
+      setTimeout(() => resolve({ ok: false, error: "설치 처리 시간이 초과되었습니다" }), 10000);
     }),
   ]);
 }
