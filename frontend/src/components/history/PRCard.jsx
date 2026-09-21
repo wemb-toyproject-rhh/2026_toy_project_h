@@ -92,6 +92,11 @@ export default function PRCard({
           </div>
 
           <div className={styles.rightGroup}>
+            {item.comment?.trim() && (
+              <span className={styles.noteIndicator} title={item.comment}>
+                <Icon name="note" size={13} />
+              </span>
+            )}
             <span className={styles.meta}>
               {item.author ? `${item.author} · ` : ""}
               {item.savedAt}
