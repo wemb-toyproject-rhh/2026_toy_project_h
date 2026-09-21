@@ -57,6 +57,14 @@ function describeConnectionError(err) {
   }
 }
 
+// tb_page/tb_instance 는 RHH가 만드는 게 아니라 RENOBIT 제품 자체의 테이블입니다.
+// 이게 없으면 "RHH 이력 기능을 아직 설치 안 한 것"이 아니라 "이 DB에 RENOBIT이
+// 설치돼 있지 않은 것"이라 성격이 다릅니다 — tb_page_hist/트리거는 tb_page 위에
+// 얹는 것이라 tb_page 없이는 애초에 만들 수도 없습니다. [프로젝트 연결 화면]은
+// 이 base 가 하나라도 없으면 "RENOBIT 미설치" 안내를 보여주고 [프로젝트 연결]
+// 버튼을 계속 비활성 상태로 둬야 합니다(그 외엔 경고만 하고 막지 않음).
+const BASE_TABLES = ["tb_page", "tb_instance"];
+
 // RHH가 이력을 쌓으려면 반드시 있어야 하는 것들(없으면 이력 자체가 안 쌓임)과,
 // 있으면 부가 기능(중요표시/알람/댓글)이 켜지는 선택 항목들입니다. [프로젝트 연결
 // 화면]에서 "이 DB에 이력 저장 트리거가 있는지"를 실제로 보여주기 위해 씁니다.
@@ -69,7 +77,7 @@ const OPTIONAL_TABLES = ["tb_history_starred", "tb_alarm_check", "tb_history_com
 // 권한이 없는 특수한 계정) 접속 테스트 결과 자체엔 영향 주지 않도록, 호출부에서
 // 실패를 따로 잡습니다.
 async function checkSchema(client) {
-  const tableNames = [...REQUIRED_TABLES, ...OPTIONAL_TABLES];
+  const tableNames = [...BASE_TABLES, ...REQUIRED_TABLES, ...OPTIONAL_TABLES];
   const [tableRes, triggerRes] = await Promise.all([
     client.query(
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ANY($1)`,
@@ -83,6 +91,9 @@ async function checkSchema(client) {
   const existingTables = new Set(tableRes.rows.map((row) => row.table_name));
   const existingTriggers = new Set(triggerRes.rows.map((row) => row.trigger_name));
 
+  const base = {};
+  for (const name of BASE_TABLES) base[name] = existingTables.has(name);
+
   const required = {};
   for (const name of REQUIRED_TABLES) required[name] = existingTables.has(name);
   for (const name of REQUIRED_TRIGGERS) required[name] = existingTriggers.has(name);
@@ -90,7 +101,7 @@ async function checkSchema(client) {
   const optional = {};
   for (const name of OPTIONAL_TABLES) optional[name] = existingTables.has(name);
 
-  return { required, optional };
+  return { base, required, optional };
 }
 
 async function testConnectionInner({ host, port, database, user, password }) {
