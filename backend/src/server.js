@@ -22,6 +22,15 @@ import {
   deleteCheckedForHists,
 } from "./alarms.js";
 import { getStarredIds, setStarred, deleteStarredForHist, deleteStarredForHists } from "./flags.js";
+import {
+  getCommentsForEntry,
+  createComment,
+  updateComment,
+  deleteComment,
+  getCommentCounts,
+  deleteCommentsForHist,
+  deleteCommentsForHists,
+} from "./comments.js";
 import { hashPassword, verifyPassword, issueToken, requireAuth } from "./auth.js";
 import { getProjectPool, testConnection } from "./projectPool.js";
 
@@ -42,6 +51,10 @@ const USER_NAME_MAX = 100;
 
 // tb_project_list 의 문자열 컬럼도 전부 varchar(1000) 입니다.
 const PROJECT_FIELD_MAX = 1000;
+
+// tb_history_comment.content 는 컬럼 자체는 text지만, 화면에서 다루기 적당한
+// 길이로 제한합니다.
+const COMMENT_MAX = 1000;
 
 // DB row(snake_case) → 응답 모양(camelCase). password 는 절대 포함하지 않습니다.
 function toProjectDto(row) {
@@ -103,7 +116,7 @@ app.get("/api/history", requireAuth, async (req, res) => {
   try {
     const pool = getProjectPool(project);
     const runQuery = (text, params) => pool.query(text, params);
-    const [entries, starredIds] = await Promise.all([
+    const [entries, starredIds, commentCounts] = await Promise.all([
       getAllEntries({ query: runQuery }),
       // 로그인한 사용자가 이 프로젝트에서 중요 표시(⭐)해둔 것들. 사용자별로
       // 완전히 독립적인 값이라 항목마다 important 필드로 얹어서 내려줍니다.
@@ -114,8 +127,21 @@ app.get("/api/history", requireAuth, async (req, res) => {
         console.warn("[GET /api/history] 중요 표시 조회 실패(무시하고 계속):", err.message);
         return new Set();
       }),
+      // 이력마다 달린 댓글 개수. important 와 다르게 사용자별로 안 갈리는 값이라
+      // 전체 목록 한 번 조회로 끝냅니다. tb_history_comment 가 없는 프로젝트에서도
+      // 이력 목록 자체는 계속 내려가도록 마찬가지로 실패를 삼킵니다.
+      getCommentCounts({ query: runQuery }).catch((err) => {
+        console.warn("[GET /api/history] 댓글 개수 조회 실패(무시하고 계속):", err.message);
+        return new Map();
+      }),
     ]);
-    res.json(entries.map((entry) => ({ ...entry, important: starredIds.has(entry.id) })));
+    res.json(
+      entries.map((entry) => ({
+        ...entry,
+        important: starredIds.has(entry.id),
+        commentCount: commentCounts.get(entry.id) ?? 0,
+      })),
+    );
   } catch (err) {
     console.error("[GET /api/history]", err.message);
     res.status(500).json({ error: "이력 조회 실패", detail: err.message });
@@ -197,6 +223,7 @@ app.delete("/api/history/trash", requireAuth, async (req, res) => {
     await Promise.all([
       deleteStarredForHists({ entries: deletedEntries, query: runQuery }),
       deleteCheckedForHists({ entries: deletedEntries, query: runQuery }),
+      deleteCommentsForHists({ entries: deletedEntries, query: runQuery }),
     ]);
 
     res.json({ deleted: pageResult.rowCount + instResult.rowCount });
@@ -236,6 +263,7 @@ app.delete("/api/history/:id", requireAuth, async (req, res) => {
     await Promise.all([
       deleteStarredForHist({ histType, histId: parsed.histId, query: runQuery }),
       deleteCheckedForHist({ histType, histId: parsed.histId, query: runQuery }),
+      deleteCommentsForHist({ histType, histId: parsed.histId, query: runQuery }),
     ]);
 
     res.json({ id: req.params.id });
@@ -362,6 +390,128 @@ app.put("/api/history/:id/important", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("[PUT /api/history/:id/important]", err.message);
     res.status(500).json({ error: "중요 표시 변경 실패", detail: err.message });
+  }
+});
+
+// 댓글 목록 조회. 오래된순(대화창처럼 아래로 쌓이는 순서)으로 돌려줍니다. 모두가
+// 보는 값이라 title/comment(=metadata)처럼 사용자 구분 없이 그대로 내려갑니다.
+// tb_history_comment(대상 DB, 사용자가 프로젝트별로 직접 생성)가 없는 프로젝트에서
+// 호출하면 500이 납니다.
+app.get("/api/history/:id/comments", requireAuth, async (req, res) => {
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const comments = await getCommentsForEntry({
+      id: req.params.id,
+      query: (text, params) => pool.query(text, params),
+    });
+    if (!comments) {
+      return res.status(400).json({ error: "id 형식이 올바르지 않습니다 (예: page-39)" });
+    }
+    res.json(comments);
+  } catch (err) {
+    console.error("[GET /api/history/:id/comments]", err.message);
+    res.status(500).json({ error: "댓글 조회 실패", detail: err.message });
+  }
+});
+
+// 댓글 작성. 작성자는 요청 본문이 아니라 항상 토큰 주인(req.userId)입니다.
+app.post("/api/history/:id/comments", requireAuth, async (req, res) => {
+  const { content: rawContent } = req.body ?? {};
+  if (typeof rawContent !== "string") {
+    return res.status(400).json({ error: "댓글 내용을 입력해 주세요" });
+  }
+  const content = rawContent.trim();
+  if (!content) {
+    return res.status(400).json({ error: "댓글 내용을 입력해 주세요" });
+  }
+  if (content.length > COMMENT_MAX) {
+    return res.status(400).json({ error: `댓글은 ${COMMENT_MAX}자를 넘을 수 없습니다`, max: COMMENT_MAX });
+  }
+
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const comment = await createComment({
+      id: req.params.id,
+      userId: req.userId,
+      content,
+      query: (text, params) => pool.query(text, params),
+    });
+    if (!comment) {
+      return res.status(400).json({ error: "id 형식이 올바르지 않습니다 (예: page-39)" });
+    }
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error("[POST /api/history/:id/comments]", err.message);
+    res.status(500).json({ error: "댓글 작성 실패", detail: err.message });
+  }
+});
+
+// 댓글 수정. 작성자 본인만 가능합니다(다른 사람 댓글은 403).
+app.put("/api/history/comments/:commentId", requireAuth, async (req, res) => {
+  const { content: rawContent } = req.body ?? {};
+  if (typeof rawContent !== "string") {
+    return res.status(400).json({ error: "댓글 내용을 입력해 주세요" });
+  }
+  const content = rawContent.trim();
+  if (!content) {
+    return res.status(400).json({ error: "댓글 내용을 입력해 주세요" });
+  }
+  if (content.length > COMMENT_MAX) {
+    return res.status(400).json({ error: `댓글은 ${COMMENT_MAX}자를 넘을 수 없습니다`, max: COMMENT_MAX });
+  }
+
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const result = await updateComment({
+      commentId: req.params.commentId,
+      userId: req.userId,
+      content,
+      query: (text, params) => pool.query(text, params),
+    });
+    if (result.status === "not_found") {
+      return res.status(404).json({ error: "댓글을 찾을 수 없습니다" });
+    }
+    if (result.status === "forbidden") {
+      return res.status(403).json({ error: "본인이 작성한 댓글만 수정할 수 있습니다" });
+    }
+    res.json(result.comment);
+  } catch (err) {
+    console.error("[PUT /api/history/comments/:commentId]", err.message);
+    res.status(500).json({ error: "댓글 수정 실패", detail: err.message });
+  }
+});
+
+// 댓글 삭제. 작성자 본인만 가능합니다(다른 사람 댓글은 403).
+app.delete("/api/history/comments/:commentId", requireAuth, async (req, res) => {
+  const project = await resolveOwnedProject(req, res);
+  if (!project) return;
+
+  try {
+    const pool = getProjectPool(project);
+    const status = await deleteComment({
+      commentId: req.params.commentId,
+      userId: req.userId,
+      query: (text, params) => pool.query(text, params),
+    });
+    if (status === "not_found") {
+      return res.status(404).json({ error: "댓글을 찾을 수 없습니다" });
+    }
+    if (status === "forbidden") {
+      return res.status(403).json({ error: "본인이 작성한 댓글만 삭제할 수 있습니다" });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[DELETE /api/history/comments/:commentId]", err.message);
+    res.status(500).json({ error: "댓글 삭제 실패", detail: err.message });
   }
 });
 
