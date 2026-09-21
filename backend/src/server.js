@@ -32,7 +32,7 @@ import {
   deleteCommentsForHists,
 } from "./comments.js";
 import { hashPassword, verifyPassword, issueToken, requireAuth } from "./auth.js";
-import { getProjectPool, testConnection } from "./projectPool.js";
+import { getProjectPool, testConnection, installSchema } from "./projectPool.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -857,6 +857,40 @@ app.post("/api/rhh/projects/test-connection", requireAuth, async (req, res) => {
   }
 
   const result = await testConnection({ host, port: portNum, database: dbName, user: account, password });
+  res.json(result);
+});
+
+// [프로젝트 연결 화면]의 "자동 설치" 버튼. tb_page_hist/tb_instance_hist/트리거 등
+// 없는 것만 골라 대상 DB에 직접 생성합니다. tb_page/tb_instance(RENOBIT 자체 테이블)
+// 자체가 없으면 installSchema()가 거부합니다(400).
+// dryRun:true 로 보내면 아무것도 실행하지 않고 "무엇을 실행할지"(plan)만 돌려줍니다
+// — 확인창에 SQL을 미리 보여주는 용도. 아직 프로젝트로 등록되지 않은 상태(연결
+// 테스트 단계)에서도 써야 해서, projectId가 아니라 연결 테스트와 같은 접속 정보를
+// 그대로 받습니다.
+app.post("/api/rhh/projects/install-schema", requireAuth, async (req, res) => {
+  const { host, port, dbName, account, password, dryRun } = req.body ?? {};
+
+  for (const [key, value] of Object.entries({ host, dbName, account, password })) {
+    if (typeof value !== "string" || !value.trim()) {
+      return res.status(400).json({ error: `${key} 을(를) 입력해 주세요` });
+    }
+  }
+  const portNum = Number(port);
+  if (!Number.isInteger(portNum) || portNum <= 0 || portNum > 65535) {
+    return res.status(400).json({ error: "port 는 1~65535 사이의 숫자여야 합니다" });
+  }
+
+  const result = await installSchema({
+    host,
+    port: portNum,
+    database: dbName,
+    user: account,
+    password,
+    dryRun: Boolean(dryRun),
+  });
+  if (!result.ok) {
+    return res.status(400).json(result);
+  }
   res.json(result);
 });
 
