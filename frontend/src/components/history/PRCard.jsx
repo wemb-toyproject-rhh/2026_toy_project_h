@@ -38,6 +38,15 @@ export default function PRCard({
 
   const goToDetail = () => navigate(`/history/${item.id}`);
 
+  const hasTagsRow = item.changedPaths?.length > 0 || item.additions + item.deletions > 0;
+  const metaEl = (
+    <span className={styles.meta}>
+      {item.author ? `${item.author} · ` : ""}
+      {item.savedAt}
+      {item.version ? ` · v${item.version}` : ""}
+    </span>
+  );
+
   return (
     <div
       className={`${styles.card} ${selected ? styles.highlighted : ""} ${toggleBlocked ? styles.disabled : ""}`}
@@ -97,11 +106,12 @@ export default function PRCard({
                 <Icon name="note" size={13} />
               </span>
             )}
-            <span className={styles.meta}>
-              {item.author ? `${item.author} · ` : ""}
-              {item.savedAt}
-              {item.version ? ` · v${item.version}` : ""}
-            </span>
+            {item.commentCount > 0 && (
+              <span className={styles.noteIndicator} title={`댓글 ${item.commentCount}개`}>
+                <Icon name="comment" size={13} />
+                <span className={styles.indicatorCount}>{item.commentCount}</span>
+              </span>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -130,9 +140,12 @@ export default function PRCard({
           </div>
         </div>
 
-        {(item.changedPaths?.length > 0 || item.additions + item.deletions > 0) && (
+        {!hasTagsRow && metaEl}
+
+        {hasTagsRow && (
           <div className={styles.tagsRow}>
             <div className={styles.tags}>
+              {metaEl}
               {item.changedPaths?.map((path) => (
                 <span key={path} className={styles.tag}>
                   <span className={styles.tagDot} />
