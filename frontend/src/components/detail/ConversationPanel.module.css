@@ -21,6 +21,33 @@
   color: var(--color-text-secondary);
 }
 
+.collapseToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+}
+
+.collapseToggle:hover {
+  background: var(--color-surface);
+}
+
+.collapseToggle svg {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.collapseIconExpanded {
+  transform: rotate(90deg);
+}
+
 .actions {
   display: flex;
   gap: 6px;
@@ -30,10 +57,13 @@
   font-size: 13px;
   line-height: 1.6;
   color: var(--color-text);
+  max-height: 220px;
+  overflow-y: auto;
 }
 
 .viewMode p {
   margin: 0;
+  white-space: pre-wrap;
 }
 
 .editMode {
