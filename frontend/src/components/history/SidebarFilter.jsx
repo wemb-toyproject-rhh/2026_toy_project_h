@@ -34,15 +34,18 @@ export default function SidebarFilter() {
     }
   }, [sidebarCollapsed]);
 
-  // 프로젝트를 바꾸면(=새로운 트리 컨텍스트) 이전에 접어뒀더라도 일단 펼친
-  // 상태로 보여줍니다 — 같은 프로젝트 안에서 페이지를 이동하는 것과는 다르게,
-  // 새 프로젝트의 전체 구조를 한 번은 보고 시작하는 게 자연스럽습니다.
+  // 프로젝트를 바꾸면(=새로운 트리 컨텍스트) 사이드바 자체는 다시 펼쳐서 보여줍니다
+  // — 같은 프로젝트 안에서 페이지를 이동하는 것과는 다르게, 새 프로젝트로 왔다는
+  // 걸 놓치지 않게요. 트리 각 페이지 노드의 펼침/접힘 상태(collapsedIds)는 아래
+  // 별도 effect가 다시 기본값(전부 접힘)으로 계산합니다.
   const lastProjectIdRef = useRef(undefined);
+  const collapseInitRef = useRef(false);
   useEffect(() => {
     const projectId = currentProject?.id;
     if (projectId === undefined) return;
     if (lastProjectIdRef.current !== undefined && lastProjectIdRef.current !== projectId) {
       setSidebarCollapsed(false);
+      collapseInitRef.current = false;
     }
     lastProjectIdRef.current = projectId;
   }, [currentProject?.id]);
@@ -66,6 +69,17 @@ export default function SidebarFilter() {
   const groupIdsWithChildren = pages
     .filter(page => page.children.length > 0)
     .map(page => page.id);
+
+  // 하위 항목이 있는 페이지는 기본적으로 접힌 채로 시작합니다. entries가 비동기로
+  // 로딩되므로, 트리 구조를 실제로 알 수 있게 된 첫 시점(또는 프로젝트를 바꿔서
+  // 다시 로딩된 시점)에 한 번만 적용합니다 — 그 뒤로는 사용자가 직접 펼치고/접는
+  // 조작만 반영합니다.
+  useEffect(() => {
+    if (collapseInitRef.current || groupIdsWithChildren.length === 0) return;
+    collapseInitRef.current = true;
+    setCollapsedIds(new Set(groupIdsWithChildren));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupIdsWithChildren.join(",")]);
 
   const toggleCollapsed = pageId => {
     setCollapsedIds(prev => {
