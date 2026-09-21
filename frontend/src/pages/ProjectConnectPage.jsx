@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useProjects } from "../context/ProjectContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { testConnection } from "../services/projectApi.js";
+import { testConnection, installSchema } from "../services/projectApi.js";
 import BackLink from "../components/common/BackLink.jsx";
 import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
@@ -249,9 +249,23 @@ export default function ProjectConnectPage() {
   // null | "testing" | "ok" | "fail" — 접속 필드를 고치면 다시 테스트해야 하므로 초기화합니다.
   const [testState, setTestState] = useState(null);
   const [testMessage, setTestMessage] = useState("");
+  // 연결 테스트가 성공했을 때 같이 내려온 테이블/트리거 존재 여부(checkSchema 결과).
+  const [schema, setSchema] = useState(null);
+  // 자동 설치 "무엇을 설치할지" 미리보기(dryRun) 상태.
+  const [installPlan, setInstallPlan] = useState(null);
+  const [installPreviewOpen, setInstallPreviewOpen] = useState(false);
+  const [installLoading, setInstallLoading] = useState(false);
+  const [installError, setInstallError] = useState("");
+  const [installResultMessage, setInstallResultMessage] = useState("");
+
   const resetTestState = () => {
     setTestState(null);
     setTestMessage("");
+    setSchema(null);
+    setInstallPlan(null);
+    setInstallPreviewOpen(false);
+    setInstallError("");
+    setInstallResultMessage("");
   };
 
   const readConnectionFields = () => {
@@ -269,18 +283,100 @@ export default function ProjectConnectPage() {
     setError("");
     setTestState("testing");
     setTestMessage("");
+    setSchema(null);
+    setInstallResultMessage("");
     try {
       const result = await testConnection(token, readConnectionFields());
-      if (result.ok) {
-        setTestState("ok");
-        setTestMessage("연결에 성공했습니다");
-      } else {
+      if (!result.ok) {
         setTestState("fail");
         setTestMessage(result.error || "연결에 실패했습니다");
+        return;
       }
+
+      // base(tb_page/tb_instance)는 RENOBIT 제품 자체 테이블이라, 이게 하나라도
+      // 없으면 이 DB엔 RENOBIT이 설치돼 있지 않은 것 — 접속은 됐어도 등록은 막습니다
+      // (트리거를 얹을 대상 자체가 없어서 자동 설치로도 해결이 안 됨).
+      const missingBase = result.schema
+        ? Object.values(result.schema.base).some((exists) => !exists)
+        : false;
+      if (missingBase) {
+        setTestState("fail");
+        setTestMessage("RENOBIT이 설치되지 않은 DB입니다 (tb_page/tb_instance 없음)");
+        setSchema(result.schema);
+        return;
+      }
+
+      setTestState("ok");
+      setTestMessage("연결에 성공했습니다");
+      setSchema(result.schema ?? null);
     } catch (err) {
       setTestState("fail");
       setTestMessage(err.message || "연결 테스트에 실패했습니다");
+    }
+  };
+
+  // required(이력 저장 필수)/optional(중요표시·알람·댓글) 중 없는 항목 이름 목록.
+  const missingRequiredKeys = schema
+    ? Object.entries(schema.required).filter(([, exists]) => !exists).map(([key]) => key)
+    : [];
+  const missingOptionalKeys = schema
+    ? Object.entries(schema.optional).filter(([, exists]) => !exists).map(([key]) => key)
+    : [];
+  const hasMissingInstallable =
+    testState === "ok" && (missingRequiredKeys.length > 0 || missingOptionalKeys.length > 0);
+
+  const groupedInstallSteps = useMemo(() => {
+    if (!installPlan) return [];
+    const map = new Map();
+    for (const step of installPlan) {
+      if (!map.has(step.label)) map.set(step.label, []);
+      map.get(step.label).push(step.sql);
+    }
+    return [...map.entries()].map(([label, sqlList]) => ({ label, sql: sqlList.join("\n\n") }));
+  }, [installPlan]);
+
+  const handleOpenInstallPreview = async () => {
+    setInstallError("");
+    setInstallResultMessage("");
+    setInstallLoading(true);
+    try {
+      const result = await installSchema(token, readConnectionFields(), true);
+      if (!result.ok) {
+        setInstallError(result.error || "설치 계획을 가져오지 못했습니다");
+        return;
+      }
+      setInstallPlan(result.plan ?? []);
+      setInstallPreviewOpen(true);
+    } finally {
+      setInstallLoading(false);
+    }
+  };
+
+  const handleCancelInstallPreview = () => {
+    setInstallPreviewOpen(false);
+    setInstallPlan(null);
+    setInstallError("");
+  };
+
+  const handleConfirmInstall = async () => {
+    setInstallError("");
+    setInstallLoading(true);
+    try {
+      const result = await installSchema(token, readConnectionFields(), false);
+      if (!result.ok) {
+        setInstallError(result.error || "설치에 실패했습니다");
+        return;
+      }
+      setInstallPreviewOpen(false);
+      setInstallPlan(null);
+      setSchema(result.schema ?? schema);
+      setInstallResultMessage(
+        result.installed?.length > 0
+          ? `설치 완료: ${result.installed.join(", ")}`
+          : "이미 모두 설치되어 있습니다",
+      );
+    } finally {
+      setInstallLoading(false);
     }
   };
 
@@ -482,6 +578,68 @@ export default function ProjectConnectPage() {
 
           {testState !== "ok" && (
             <p className={styles.hint}>[연결 테스트]를 먼저 통과해야 프로젝트를 연결할 수 있습니다</p>
+          )}
+
+          {installResultMessage && <p className={styles.testOk}>✓ {installResultMessage}</p>}
+
+          {hasMissingInstallable && !installPreviewOpen && (
+            <div className={styles.schemaNotice}>
+              <p className={styles.schemaNoticeText}>
+                {missingRequiredKeys.length > 0
+                  ? "이력 저장에 필요한 테이블/트리거가 없습니다."
+                  : "중요 표시/알람/댓글 기능용 테이블이 일부 없습니다."}
+                {" "}아래 버튼을 클릭하면 자동 설치됩니다.
+              </p>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                disabled={installLoading}
+                onClick={handleOpenInstallPreview}
+              >
+                {installLoading ? "확인 중..." : "자동 설치"}
+              </Button>
+            </div>
+          )}
+
+          {installError && !installPreviewOpen && <p className={styles.error}>{installError}</p>}
+
+          {installPreviewOpen && (
+            <div className={styles.installPreview}>
+              <p className={styles.schemaNoticeText}>다음을 설치합니다 (없는 것만 새로 생성됩니다):</p>
+              <div className={styles.helpSteps}>
+                {groupedInstallSteps.map((step) => (
+                  <div key={step.label} className={styles.helpStep}>
+                    <span className={styles.helpSqlLabel}>{step.label}</span>
+                    <pre className={styles.helpSql}>
+                      <code>{step.sql}</code>
+                    </pre>
+                  </div>
+                ))}
+              </div>
+              {installError && <p className={styles.error}>{installError}</p>}
+              <div className={styles.actions}>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  disabled={installLoading}
+                  onClick={handleCancelInstallPreview}
+                >
+                  취소
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className={styles.submit}
+                  disabled={installLoading}
+                  onClick={handleConfirmInstall}
+                >
+                  {installLoading ? "설치 중..." : "설치 실행"}
+                </Button>
+              </div>
+            </div>
           )}
 
           <div className={styles.actions}>
