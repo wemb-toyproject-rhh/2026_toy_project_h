@@ -100,6 +100,26 @@
   color: var(--color-text-muted);
 }
 
+.commentJumpBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.commentJumpBtn:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
 .starBtn.starActive,
 .starBtn.starActive:hover:not(:disabled) {
   color: #eab308;

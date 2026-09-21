@@ -18,6 +18,7 @@ import DiffStatBadge from "../components/common/DiffStatBadge.jsx";
 import CopyButton from "../components/common/CopyButton.jsx";
 import ScrollToTopButton from "../components/common/ScrollToTopButton.jsx";
 import ConversationPanel from "../components/detail/ConversationPanel.jsx";
+import CommentThread from "../components/detail/CommentThread.jsx";
 import SubTabGroup from "../components/detail/SubTabGroup.jsx";
 import DiffBlock from "../components/common/DiffBlock.jsx";
 import styles from "./HistoryDetailPage.module.css";
@@ -88,6 +89,11 @@ export default function HistoryDetailPage() {
 
   const [activePrimaryId, setActivePrimaryId] = useState(null);
   const [activeSubId, setActiveSubId] = useState(null);
+  const [commentCount, setCommentCount] = useState(0);
+
+  const scrollToComments = () => {
+    document.getElementById("comment-thread")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // 위쪽 topBar의 이전/다음 버튼이 스크롤로 화면 밖으로 나갈 만큼 내려갔을 때만
   // 하단에도 같은 버튼을 띄웁니다 — 안 그러면 내용이 짧아도 항상 둘 다 보여서
@@ -110,6 +116,7 @@ export default function HistoryDetailPage() {
   useEffect(() => {
     setActivePrimaryId(null);
     setActiveSubId(null);
+    setCommentCount(0);
   }, [entry?.id]);
 
   // entry arrives asynchronously (fetched from the API), so the default tab
@@ -237,6 +244,10 @@ export default function HistoryDetailPage() {
           >
             <Icon name="star" size={15} filled={starredIds.has(entry.id)} />
           </Button>
+          <button type="button" className={styles.commentJumpBtn} onClick={scrollToComments}>
+            <Icon name="comment" size={13} />
+            댓글{commentCount > 0 ? ` ${commentCount}` : ""}
+          </button>
           <CopyButton
             text={getTabContent(entry, activePrimaryId, activeSubId)}
             label={`${activeCopyLabel} 코드 복사`}
@@ -245,6 +256,7 @@ export default function HistoryDetailPage() {
       </div>
 
       <ConversationPanel
+        key={entry.id}
         note={note}
         onSave={(newComment) => updateMetadata(entry.id, { comment: newComment })}
       />
@@ -263,6 +275,8 @@ export default function HistoryDetailPage() {
       />
 
       <DiffBlock lines={diffLines} />
+
+      <CommentThread entryId={entry.id} onCountChange={setCommentCount} />
 
       {siblings.length > 1 && scrolledPastTop && (
         <div className={styles.floatingNav}>

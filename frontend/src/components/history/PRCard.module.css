@@ -134,6 +134,19 @@
   white-space: nowrap;
 }
 
+.noteIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.indicatorCount {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
 .tagsRow {
   display: flex;
   align-items: flex-start;
@@ -144,6 +157,7 @@
 .tags {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 5px;
 }
 
