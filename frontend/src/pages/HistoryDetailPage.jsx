@@ -256,6 +256,7 @@ export default function HistoryDetailPage() {
       </div>
 
       <ConversationPanel
+        key={entry.id}
         note={note}
         onSave={(newComment) => updateMetadata(entry.id, { comment: newComment })}
       />

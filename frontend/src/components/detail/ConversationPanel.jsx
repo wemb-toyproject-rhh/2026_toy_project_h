@@ -10,7 +10,8 @@ export default function ConversationPanel({ note, onSave }) {
   const [draft, setDraft] = useState(note.raw);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [collapsed, setCollapsed] = useState(true);
+  // 메모가 있으면 바로 보이게 펼친 채로, 없으면 접힌 채로 시작합니다.
+  const [collapsed, setCollapsed] = useState(() => !note.raw?.trim());
 
   const startEdit = () => {
     setDraft(note.raw);
