@@ -8,166 +8,7 @@ import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
 import PasswordInput from "../components/common/PasswordInput.jsx";
 import EditableTitle from "../components/common/EditableTitle.jsx";
-import CopyButton from "../components/common/CopyButton.jsx";
 import styles from "./ProjectConnectPage.module.css";
-
-// RENOBIT 자체에는 tb_page_hist/tb_instance_hist가 없으므로, 이력이 자동으로 쌓이게
-// 하려면 연결할 DB에 사용자가 직접 미리 만들어둬야 하는 트리거 설치 스크립트입니다.
-// 한 번에 실행하기보다 테이블 생성 → 트리거 생성 순으로, 대상별로 나눠서 안내합니다.
-const HISTORY_SETUP_STEPS = [
-  {
-    title: "1. tb_page_hist 테이블 생성",
-    sql: `CREATE TABLE public.tb_page_hist (
-	page_id varchar(36) NOT NULL,
-	"name" varchar(100) NOT NULL,
-	page_type varchar(20) NOT NULL,
-	"version" varchar(20) NULL,
-	secret bpchar(1) DEFAULT 'N'::bpchar NULL,
-	update_dt timestamp NULL,
-	props text NULL,
-	reg_dt timestamp DEFAULT CURRENT_TIMESTAMP NULL,
-	parent_id varchar(36) NULL,
-	prev_id varchar(36) NULL,
-	last_user varchar(20) NULL,
-	locked_yn bpchar(1) DEFAULT 'N'::bpchar NOT NULL,
-	"comment" varchar(1000) NOT NULL,
-	hist_id bigserial NOT NULL,
-	css_code text NULL,
-	lc_before_load text NULL,
-	lc_loaded text NULL,
-	lc_before_unload text NULL,
-	CONSTRAINT tb_page_hist_pkey PRIMARY KEY (hist_id)
-);`,
-  },
-  {
-    title: "2. tb_page → tb_page_hist 트리거 생성",
-    sql: `-- 트리거 함수
--- 기존 값과 동일하면 저장 x
-CREATE OR REPLACE FUNCTION public.fn_tb_page_hist() RETURNS trigger LANGUAGE plpgsql
-AS $function$
-DECLARE
-    v_props jsonb := NEW.props::jsonb;
-    v_last_props text;
-BEGIN
-    -- master 페이지는 이력 저장 대상 아님
-    IF NEW.page_id = 'master' THEN
-        RETURN NEW;
-    END IF;
-
-    -- 이 page_id의 가장 최근 이력의 props
-    SELECT props INTO v_last_props
-      FROM tb_page_hist
-     WHERE page_id = NEW.page_id
-     ORDER BY hist_id DESC
-     LIMIT 1;
-
-    -- 직전 저장본과 props가 완전히 동일하면 skip
-    IF v_last_props IS NOT DISTINCT FROM NEW.props THEN
-        RETURN NEW;
-    END IF;
-
-    INSERT INTO tb_page_hist (
-        page_id, name, page_type, version, secret,
-        update_dt, props, reg_dt, parent_id, prev_id,
-        last_user, locked_yn, comment,
-        css_code, lc_before_load, lc_loaded, lc_before_unload
-    )
-    VALUES (
-        NEW.page_id, NEW.name, NEW.page_type, NEW.version, NEW.secret,
-        NEW.update_dt, NEW.props, NEW.reg_dt, NEW.parent_id, NEW.prev_id,
-        NEW.last_user, NEW.locked_yn, '',
-        v_props #>> '{publishCode,cssCode}',
-        v_props #>> '{events,beforeLoad}',
-        v_props #>> '{events,loaded}',
-        v_props #>> '{events,beforeUnLoad}'
-    );
-
-    RETURN NEW;
-END;
-$function$;
-
--- 트리거 등록
-CREATE TRIGGER trg_tb_page_hist
-AFTER INSERT OR UPDATE ON tb_page
-FOR EACH ROW
-EXECUTE FUNCTION fn_tb_page_hist();`,
-  },
-  {
-    title: "3. tb_instance_hist 테이블 생성",
-    sql: `CREATE TABLE public.tb_instance_hist (
-	inst_id varchar(36) NOT NULL,
-	layer_name varchar(20) NOT NULL,
-	category varchar(20) NULL,
-	page_id varchar(36) NULL,
-	comp_name varchar(100) NOT NULL,
-	"name" varchar(255) NULL,
-	group_id varchar(36) NULL,
-	props text NULL,
-	asset_id varchar(36) NULL,
-	reg_dt timestamp DEFAULT CURRENT_TIMESTAMP NULL,
-	"comment" varchar(1000) NOT NULL,
-	hist_id bigserial NOT NULL,
-	html_code text NULL,
-	css_code text NULL,
-	lc_register text NULL,
-	lc_complete text NULL,
-	lc_before_destroy text NULL,
-	lc_destroy text NULL,
-	lc_completed text NULL,
-	lc_preview text NULL,
-	CONSTRAINT tb_instance_hist_pkey PRIMARY KEY (hist_id)
-);`,
-  },
-  {
-    title: "4. tb_instance → tb_instance_hist 트리거 생성",
-    sql: `-- 트리거 함수
--- 기존 값과 동일하면 저장 x
-CREATE OR REPLACE FUNCTION public.fn_tb_instance_hist() RETURNS trigger LANGUAGE plpgsql
-AS $function$
-DECLARE
-    v_props jsonb := NEW.props::jsonb;
-    v_last_props text;
-BEGIN
-    SELECT props INTO v_last_props
-      FROM tb_instance_hist
-     WHERE inst_id = NEW.inst_id
-     ORDER BY hist_id DESC
-     LIMIT 1;
-
-    IF v_last_props IS NOT DISTINCT FROM NEW.props THEN
-        RETURN NEW;
-    END IF;
-
-    INSERT INTO tb_instance_hist (
-        inst_id, layer_name, category, page_id, comp_name,
-        name, group_id, props, asset_id, reg_dt, comment,
-        html_code, css_code,
-        lc_register, lc_complete, lc_before_destroy, lc_destroy, lc_completed, lc_preview
-    )
-    VALUES (
-        NEW.inst_id, NEW.layer_name, NEW.category, NEW.page_id, NEW.comp_name,
-        NEW.name, NEW.group_id, NEW.props, NEW.asset_id, NEW.reg_dt, '',
-        v_props #>> '{publishCode,htmlCode}',
-        v_props #>> '{publishCode,cssCode}',
-        v_props #>> '{events,register}',
-        v_props #>> '{events,complete}',
-        v_props #>> '{events,beforeDestroy}',
-        v_props #>> '{events,destroy}',
-        v_props #>> '{events,completed}',
-        v_props #>> '{events,preview}'
-    );
-
-    RETURN NEW;
-END;
-$function$;
-
--- 트리거 등록
-CREATE TRIGGER trg_tb_instance_hist
-AFTER INSERT OR UPDATE ON tb_instance
-FOR EACH ROW
-EXECUTE FUNCTION fn_tb_instance_hist();`,
-  },
-];
 
 const GALLERY_GRADIENTS = [
   "linear-gradient(135deg, #6366f1, #a855f7)",
@@ -206,24 +47,6 @@ export default function ProjectConnectPage() {
   const [galleryQuery, setGalleryQuery] = useState("");
   const autoOpenedRef = useRef(false);
   const hasFetchedRef = useRef(false);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const helpWrapRef = useRef(null);
-
-  useEffect(() => {
-    if (!helpOpen) return undefined;
-    const handlePointerDown = (e) => {
-      if (!helpWrapRef.current?.contains(e.target)) setHelpOpen(false);
-    };
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") setHelpOpen(false);
-    };
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [helpOpen]);
 
   // 연결된 프로젝트가 있으면 처음 진입 시 갤러리를 자동으로 펼쳐줍니다. loading이
   // true였다가 false로 돌아오는 시점(=목록 요청이 실제로 한 번 끝난 시점)을 기다려서
@@ -251,9 +74,6 @@ export default function ProjectConnectPage() {
   const [testMessage, setTestMessage] = useState("");
   // 연결 테스트가 성공했을 때 같이 내려온 테이블/트리거 존재 여부(checkSchema 결과).
   const [schema, setSchema] = useState(null);
-  // 자동 설치 "무엇을 설치할지" 미리보기(dryRun) 상태.
-  const [installPlan, setInstallPlan] = useState(null);
-  const [installPreviewOpen, setInstallPreviewOpen] = useState(false);
   const [installLoading, setInstallLoading] = useState(false);
   const [installError, setInstallError] = useState("");
   const [installResultMessage, setInstallResultMessage] = useState("");
@@ -262,8 +82,6 @@ export default function ProjectConnectPage() {
     setTestState(null);
     setTestMessage("");
     setSchema(null);
-    setInstallPlan(null);
-    setInstallPreviewOpen(false);
     setInstallError("");
     setInstallResultMessage("");
   };
@@ -325,41 +143,9 @@ export default function ProjectConnectPage() {
   const hasMissingInstallable =
     testState === "ok" && (missingRequiredKeys.length > 0 || missingOptionalKeys.length > 0);
 
-  const groupedInstallSteps = useMemo(() => {
-    if (!installPlan) return [];
-    const map = new Map();
-    for (const step of installPlan) {
-      if (!map.has(step.label)) map.set(step.label, []);
-      map.get(step.label).push(step.sql);
-    }
-    return [...map.entries()].map(([label, sqlList]) => ({ label, sql: sqlList.join("\n\n") }));
-  }, [installPlan]);
-
-  const handleOpenInstallPreview = async () => {
+  const handleAutoInstall = async () => {
     setInstallError("");
     setInstallResultMessage("");
-    setInstallLoading(true);
-    try {
-      const result = await installSchema(token, readConnectionFields(), true);
-      if (!result.ok) {
-        setInstallError(result.error || "설치 계획을 가져오지 못했습니다");
-        return;
-      }
-      setInstallPlan(result.plan ?? []);
-      setInstallPreviewOpen(true);
-    } finally {
-      setInstallLoading(false);
-    }
-  };
-
-  const handleCancelInstallPreview = () => {
-    setInstallPreviewOpen(false);
-    setInstallPlan(null);
-    setInstallError("");
-  };
-
-  const handleConfirmInstall = async () => {
-    setInstallError("");
     setInstallLoading(true);
     try {
       const result = await installSchema(token, readConnectionFields(), false);
@@ -367,8 +153,6 @@ export default function ProjectConnectPage() {
         setInstallError(result.error || "설치에 실패했습니다");
         return;
       }
-      setInstallPreviewOpen(false);
-      setInstallPlan(null);
       setSchema(result.schema ?? schema);
       setInstallResultMessage(
         result.installed?.length > 0
@@ -449,46 +233,8 @@ export default function ProjectConnectPage() {
         </div>
         <form className={styles.card} onSubmit={handleSubmit} ref={formRef}>
           <span className={styles.brand}>RHH</span>
-          <div className={styles.titleRow} ref={helpWrapRef}>
+          <div className={styles.titleRow}>
             <h1 className={styles.title}>프로젝트 연결</h1>
-            <button
-              type="button"
-              className={styles.helpLink}
-              aria-expanded={helpOpen}
-              onClick={() => setHelpOpen((v) => !v)}
-            >
-              도움말 보기
-            </button>
-            {helpOpen && (
-              <div className={styles.helpPanel}>
-                <p className={styles.helpText}>
-                  RENOBIT 자체에는 변경 이력을 저장하는 테이블이 없습니다. 이력이 자동으로
-                  쌓이게 하려면, 연결할 DB에 아래 두 테이블과 값이 바뀔 때마다 기록하는
-                  트리거를 미리 만들어둬야 합니다.
-                </p>
-                <ul className={styles.helpList}>
-                  <li>
-                    <code>tb_page_hist</code>
-                  </li>
-                  <li>
-                    <code>tb_instance_hist</code>
-                  </li>
-                </ul>
-                <div className={styles.helpSteps}>
-                  {HISTORY_SETUP_STEPS.map((step) => (
-                    <div key={step.title} className={styles.helpStep}>
-                      <div className={styles.helpSqlHeader}>
-                        <span className={styles.helpSqlLabel}>{step.title}</span>
-                        <CopyButton text={step.sql} label={`${step.title} 복사`} size="icon" />
-                      </div>
-                      <pre className={styles.helpSql}>
-                        <code>{step.sql}</code>
-                      </pre>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
           <p className={styles.subtitle}>
             레노빗 DB 접속 정보를 입력하면 이력이 자동으로 쌓입니다
@@ -582,7 +328,7 @@ export default function ProjectConnectPage() {
 
           {installResultMessage && <p className={styles.testOk}>✓ {installResultMessage}</p>}
 
-          {hasMissingInstallable && !installPreviewOpen && (
+          {hasMissingInstallable && (
             <div className={styles.schemaNotice}>
               <p className={styles.schemaNoticeText}>
                 {missingRequiredKeys.length > 0
@@ -595,52 +341,14 @@ export default function ProjectConnectPage() {
                 variant="default"
                 size="sm"
                 disabled={installLoading}
-                onClick={handleOpenInstallPreview}
+                onClick={handleAutoInstall}
               >
-                {installLoading ? "확인 중..." : "자동 설치"}
+                {installLoading ? "설치 중..." : "자동 설치"}
               </Button>
             </div>
           )}
 
-          {installError && !installPreviewOpen && <p className={styles.error}>{installError}</p>}
-
-          {installPreviewOpen && (
-            <div className={styles.installPreview}>
-              <p className={styles.schemaNoticeText}>다음을 설치합니다 (없는 것만 새로 생성됩니다):</p>
-              <div className={styles.helpSteps}>
-                {groupedInstallSteps.map((step) => (
-                  <div key={step.label} className={styles.helpStep}>
-                    <span className={styles.helpSqlLabel}>{step.label}</span>
-                    <pre className={styles.helpSql}>
-                      <code>{step.sql}</code>
-                    </pre>
-                  </div>
-                ))}
-              </div>
-              {installError && <p className={styles.error}>{installError}</p>}
-              <div className={styles.actions}>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  disabled={installLoading}
-                  onClick={handleCancelInstallPreview}
-                >
-                  취소
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  className={styles.submit}
-                  disabled={installLoading}
-                  onClick={handleConfirmInstall}
-                >
-                  {installLoading ? "설치 중..." : "설치 실행"}
-                </Button>
-              </div>
-            </div>
-          )}
+          {installError && <p className={styles.error}>{installError}</p>}
 
           <div className={styles.actions}>
             <Button
