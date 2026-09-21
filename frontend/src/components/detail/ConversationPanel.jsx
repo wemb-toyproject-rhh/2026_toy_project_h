@@ -57,6 +57,12 @@ export default function ConversationPanel({ note, onSave }) {
           />
           <span className={styles.title}>메모</span>
         </button>
+        {/* 이 span은 접힘 여부와 무관하게 항상 렌더링합니다 — 이게 없으면(펼친 상태)
+        flex:1인 자리가 사라져서 "수정" 버튼이 왼쪽으로 붙어버리고, 접었다 폈다 할
+        때마다 버튼 위치가 흔들립니다. 내용은 접혔을 때만 채웁니다. */}
+        <span className={styles.preview}>
+          {collapsed && note.raw?.trim() ? note.raw : ""}
+        </span>
         {!editing ? (
           <Button variant="ghost" size="sm" onClick={startEdit}>
             수정
