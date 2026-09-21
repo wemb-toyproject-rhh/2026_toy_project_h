@@ -252,6 +252,15 @@ const ICONS = {
       <path d="M2.5 2.5l11 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     </>
   ),
+  comment: (
+    <path
+      d="M2 3.5h12v7H8.8L6 13.2v-2.7H2Z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+  ),
   trash: (
     <>
       <path d="M3 4.5h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
