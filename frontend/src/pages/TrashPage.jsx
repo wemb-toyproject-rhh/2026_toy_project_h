@@ -13,6 +13,7 @@ import Button from "../components/common/Button.jsx";
 import Icon from "../components/common/Icon.jsx";
 import Badge from "../components/common/Badge.jsx";
 import ConfirmDialog from "../components/common/ConfirmDialog.jsx";
+import ScrollToTopButton from "../components/common/ScrollToTopButton.jsx";
 import styles from "./TrashPage.module.css";
 
 export default function TrashPage() {
@@ -221,6 +222,8 @@ export default function TrashPage() {
         onConfirm={confirmEmptyTrash}
         onCancel={() => setConfirmEmptyOpen(false)}
       />
+
+      <ScrollToTopButton />
     </div>
   );
 }
