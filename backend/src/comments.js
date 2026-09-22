@@ -11,14 +11,20 @@
 // 이 조회가 실패해도 댓글 자체는 보여줘야 하므로 실패를 삼키고 userName만 null로 둡니다.
 //
 //   CREATE TABLE tb_history_comment (
-//     comment_id BIGSERIAL PRIMARY KEY,
-//     hist_type  VARCHAR(10)   NOT NULL,        -- 'page' | 'inst'
-//     hist_id    INTEGER       NOT NULL,
-//     user_id    VARCHAR(1000) NOT NULL,        -- 작성자. tb_user_rhh.user_id 와 같은 문자열(FK 아님)
-//     content    TEXT          NOT NULL,
-//     created_at TIMESTAMP     NOT NULL DEFAULT now(),
-//     updated_at TIMESTAMP     NOT NULL DEFAULT now()
+//     comment_id        BIGSERIAL PRIMARY KEY,
+//     hist_type         VARCHAR(10)   NOT NULL,        -- 'page' | 'inst'
+//     hist_id           INTEGER       NOT NULL,
+//     parent_comment_id BIGINT NULL REFERENCES tb_history_comment(comment_id) ON DELETE CASCADE,
+//                                                       -- NULL이면 원댓글, 값이 있으면 그 댓글의 대댓글
+//     user_id           VARCHAR(1000) NOT NULL,        -- 작성자. tb_user_rhh.user_id 와 같은 문자열(FK 아님)
+//     content           TEXT          NOT NULL,
+//     created_at        TIMESTAMP     NOT NULL DEFAULT now(),
+//     updated_at        TIMESTAMP     NOT NULL DEFAULT now()
 //   );
+//
+// 대댓글도 hist_type/hist_id는 부모 댓글과 동일하게(=그 이력 그대로) 채웁니다 —
+// "이 이력에 달린 댓글 전체"를 가져오는 쿼리가 대댓글 유무와 무관하게 그대로
+// 동작하게 하기 위함이고, 원댓글/대댓글 구분은 parent_comment_id 로만 합니다.
 import { query as rhhQuery } from "./db.js";
 
 // entries.js 가 만드는 id 는 "page-39" / "inst-101" 형식입니다.
@@ -36,6 +42,7 @@ function toDto(row) {
   return {
     commentId: Number(row.comment_id),
     id: `${row.hist_type}-${row.hist_id}`,
+    parentCommentId: row.parent_comment_id != null ? Number(row.parent_comment_id) : null,
     userId: row.user_id,
     userName: row.user_name ?? null,
     content: row.content,
@@ -73,19 +80,34 @@ export async function getCommentsForEntry({ id, query: runQuery }) {
   return rows.map((row) => toDto({ ...row, user_name: names.get(row.user_id) }));
 }
 
-// 댓글 작성. 작성자는 항상 호출부가 넘긴 userId(토큰 주인)입니다.
-// id 형식이 잘못됐으면 null(호출부가 400 처리).
-export async function createComment({ id, userId, content, query: runQuery }) {
+// 댓글(또는 대댓글) 작성. 작성자는 항상 호출부가 넘긴 userId(토큰 주인)입니다.
+// parentCommentId 를 넘기면 그 댓글에 대한 대댓글로 저장합니다 — 대댓글 대상이
+// 실제로 존재하고, 같은 이력(id)에 달린 댓글이 맞는지 먼저 확인합니다(다른
+// 이력의 댓글에 몰래 대댓글이 달리는 걸 방지).
+//
+// 반환: { status: "invalid_id" | "parent_not_found" | "parent_mismatch" | "ok", comment? }
+export async function createComment({ id, userId, content, parentCommentId = null, query: runQuery }) {
   const parsed = splitEntryId(id);
-  if (!parsed) return null;
+  if (!parsed) return { status: "invalid_id" };
+
+  if (parentCommentId != null) {
+    const parentRes = await runQuery(`SELECT hist_type, hist_id FROM tb_history_comment WHERE comment_id = $1`, [
+      parentCommentId,
+    ]);
+    if (parentRes.rowCount === 0) return { status: "parent_not_found" };
+    const parent = parentRes.rows[0];
+    if (parent.hist_type !== parsed.histType || String(parent.hist_id) !== String(parsed.histId)) {
+      return { status: "parent_mismatch" };
+    }
+  }
 
   const { rows } = await runQuery(
-    `INSERT INTO tb_history_comment (hist_type, hist_id, user_id, content)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [parsed.histType, parsed.histId, userId, content],
+    `INSERT INTO tb_history_comment (hist_type, hist_id, parent_comment_id, user_id, content)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [parsed.histType, parsed.histId, parentCommentId, userId, content],
   );
   const names = await fetchUserNames([userId]);
-  return toDto({ ...rows[0], user_name: names.get(userId) });
+  return { status: "ok", comment: toDto({ ...rows[0], user_name: names.get(userId) }) };
 }
 
 // 댓글 수정. 작성자 본인만 수정할 수 있습니다.
