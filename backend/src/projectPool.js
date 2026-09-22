@@ -85,9 +85,16 @@ const MANAGEMENT_TABLES = ["tb_user_rhh", "tb_project_list"];
 // 존재 여부만 조회합니다. 이 조회 자체가 실패해도(예: information_schema 조회
 // 권한이 없는 특수한 계정) 접속 테스트 결과 자체엔 영향 주지 않도록, 호출부에서
 // 실패를 따로 잡습니다.
+// 테이블은 이미 있지만 나중에 컬럼만 추가된 경우(예: 대댓글 기능의
+// tb_history_comment.parent_comment_id)를 감지하기 위한, 테이블 존재 여부와는
+// 별개의 컬럼 단위 확인입니다. "테이블 있음" 체크만으로는 이 컬럼이 없는 예전
+// 설치를 구분할 수 없어서 따로 둡니다 — 이게 없으면 "자동 설치"가 테이블이 이미
+// 있다는 이유로 컬럼 추가를 건너뛰어 버립니다.
+const COLUMN_CHECKS = [{ key: "tb_history_comment_reply", table: "tb_history_comment", column: "parent_comment_id" }];
+
 async function checkSchema(client) {
   const tableNames = [...BASE_TABLES, ...REQUIRED_TABLES, ...OPTIONAL_TABLES, ...MANAGEMENT_TABLES];
-  const [tableRes, triggerRes] = await Promise.all([
+  const [tableRes, triggerRes, columnRes] = await Promise.all([
     client.query(
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ANY($1)`,
       [tableNames],
@@ -96,9 +103,15 @@ async function checkSchema(client) {
       `SELECT DISTINCT trigger_name FROM information_schema.triggers WHERE trigger_schema = 'public' AND trigger_name = ANY($1)`,
       [REQUIRED_TRIGGERS],
     ),
+    client.query(
+      `SELECT table_name, column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = ANY($1)`,
+      [COLUMN_CHECKS.map((c) => c.table)],
+    ),
   ]);
   const existingTables = new Set(tableRes.rows.map((row) => row.table_name));
   const existingTriggers = new Set(triggerRes.rows.map((row) => row.trigger_name));
+  const existingColumns = new Set(columnRes.rows.map((row) => `${row.table_name}.${row.column_name}`));
 
   const base = {};
   for (const name of BASE_TABLES) base[name] = existingTables.has(name);
@@ -109,6 +122,9 @@ async function checkSchema(client) {
 
   const optional = {};
   for (const name of OPTIONAL_TABLES) optional[name] = existingTables.has(name);
+  // 컬럼 단위 확인 결과도 optional 안에 같이 얹습니다 — buildInstallPlan()이 쓰는
+  // toMissingMap()이 optional의 모든 키를 그대로 통과시키므로 별도 배선이 필요 없습니다.
+  for (const { key, table, column } of COLUMN_CHECKS) optional[key] = existingColumns.has(`${table}.${column}`);
 
   const management = {};
   for (const name of MANAGEMENT_TABLES) management[name] = existingTables.has(name);

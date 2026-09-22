@@ -419,7 +419,7 @@ app.get("/api/history/:id/comments", requireAuth, async (req, res) => {
 
 // 댓글 작성. 작성자는 요청 본문이 아니라 항상 토큰 주인(req.userId)입니다.
 app.post("/api/history/:id/comments", requireAuth, async (req, res) => {
-  const { content: rawContent } = req.body ?? {};
+  const { content: rawContent, parentCommentId: rawParentId } = req.body ?? {};
   if (typeof rawContent !== "string") {
     return res.status(400).json({ error: "댓글 내용을 입력해 주세요" });
   }
@@ -431,21 +431,38 @@ app.post("/api/history/:id/comments", requireAuth, async (req, res) => {
     return res.status(400).json({ error: `댓글은 ${COMMENT_MAX}자를 넘을 수 없습니다`, max: COMMENT_MAX });
   }
 
+  // parentCommentId를 보내면 대댓글로 저장합니다. 안 보내거나 null이면 원댓글.
+  let parentCommentId = null;
+  if (rawParentId !== undefined && rawParentId !== null) {
+    const parsedParentId = Number(rawParentId);
+    if (!Number.isInteger(parsedParentId) || parsedParentId <= 0) {
+      return res.status(400).json({ error: "parentCommentId 형식이 올바르지 않습니다" });
+    }
+    parentCommentId = parsedParentId;
+  }
+
   const project = await resolveOwnedProject(req, res);
   if (!project) return;
 
   try {
     const pool = getProjectPool(project);
-    const comment = await createComment({
+    const result = await createComment({
       id: req.params.id,
       userId: req.userId,
       content,
+      parentCommentId,
       query: (text, params) => pool.query(text, params),
     });
-    if (!comment) {
+    if (result.status === "invalid_id") {
       return res.status(400).json({ error: "id 형식이 올바르지 않습니다 (예: page-39)" });
     }
-    res.status(201).json(comment);
+    if (result.status === "parent_not_found") {
+      return res.status(404).json({ error: "답글을 달 원본 댓글을 찾을 수 없습니다" });
+    }
+    if (result.status === "parent_mismatch") {
+      return res.status(400).json({ error: "다른 이력에 달린 댓글에는 답글을 달 수 없습니다" });
+    }
+    res.status(201).json(result.comment);
   } catch (err) {
     console.error("[POST /api/history/:id/comments]", err.message);
     res.status(500).json({ error: "댓글 작성 실패", detail: err.message });
