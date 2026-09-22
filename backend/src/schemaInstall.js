@@ -113,15 +113,24 @@ CREATE TABLE IF NOT EXISTS tb_alarm_check (
 
 const SQL_TB_HISTORY_COMMENT = `
 CREATE TABLE IF NOT EXISTS tb_history_comment (
-  comment_id BIGSERIAL PRIMARY KEY,
-  hist_type  VARCHAR(10)   NOT NULL,
-  hist_id    INTEGER       NOT NULL,
-  user_id    VARCHAR(1000) NOT NULL,
-  content    TEXT          NOT NULL,
-  created_at TIMESTAMP     NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP     NOT NULL DEFAULT now()
+  comment_id        BIGSERIAL PRIMARY KEY,
+  hist_type         VARCHAR(10)   NOT NULL,
+  hist_id           INTEGER       NOT NULL,
+  parent_comment_id BIGINT NULL REFERENCES tb_history_comment(comment_id) ON DELETE CASCADE,
+  user_id           VARCHAR(1000) NOT NULL,
+  content           TEXT          NOT NULL,
+  created_at        TIMESTAMP     NOT NULL DEFAULT now(),
+  updated_at        TIMESTAMP     NOT NULL DEFAULT now()
 )`;
+// CREATE TABLE IF NOT EXISTS 는 테이블이 이미 있으면 통째로 건너뛰기 때문에, 대댓글
+// 기능 추가 전에 이미 tb_history_comment를 설치해둔 프로젝트는 이 컬럼이 없을 수
+// 있습니다. ADD COLUMN IF NOT EXISTS 로 그런 기존 설치도 같이 맞춰줍니다(새로 만든
+// 경우엔 이미 있으므로 아무 일도 안 함).
+const SQL_ALTER_HISTORY_COMMENT_PARENT = `
+ALTER TABLE tb_history_comment
+  ADD COLUMN IF NOT EXISTS parent_comment_id BIGINT REFERENCES tb_history_comment(comment_id) ON DELETE CASCADE`;
 const SQL_IDX_HISTORY_COMMENT = `CREATE INDEX IF NOT EXISTS idx_tb_history_comment_hist ON tb_history_comment (hist_type, hist_id, created_at)`;
+const SQL_IDX_HISTORY_COMMENT_PARENT = `CREATE INDEX IF NOT EXISTS idx_tb_history_comment_parent ON tb_history_comment (parent_comment_id)`;
 
 const SQL_FN_TB_PAGE_HIST = `
 CREATE OR REPLACE FUNCTION public.fn_tb_page_hist() RETURNS trigger LANGUAGE plpgsql
@@ -229,7 +238,12 @@ const INSTALL_ITEMS = [
   {
     key: "tb_history_comment",
     label: "테이블 tb_history_comment",
-    statements: [SQL_TB_HISTORY_COMMENT, SQL_IDX_HISTORY_COMMENT],
+    statements: [
+      SQL_TB_HISTORY_COMMENT,
+      SQL_ALTER_HISTORY_COMMENT_PARENT,
+      SQL_IDX_HISTORY_COMMENT,
+      SQL_IDX_HISTORY_COMMENT_PARENT,
+    ],
   },
   {
     key: "trg_tb_page_hist",
