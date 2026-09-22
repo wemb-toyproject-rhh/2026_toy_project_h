@@ -41,6 +41,9 @@ export default function HistoryListPage() {
 
   // Filter/sort criteria live in the URL (not local state) so they survive
   // navigating to a detail/compare page and back via BackLink or browser back.
+  // replace: true — 필터/검색을 조작할 때마다 히스토리에 쌓이면, 뒤로가기가
+  // 이전 화면이 아니라 한 글자 전 검색어로 돌아가는 식이 되어버립니다. 그래서
+  // 같은 자리(현재 항목)를 계속 덮어씁니다.
   const updateParams = updates => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
@@ -49,7 +52,7 @@ export default function HistoryListPage() {
         else next.set(key, value);
       });
       return next;
-    });
+    }, { replace: true });
   };
 
   // 프로젝트를 바꾸면 이전 프로젝트에서 체크해둔 선택/필터/정렬을 이어가면 안 됩니다 —
@@ -68,7 +71,7 @@ export default function HistoryListPage() {
         const next = new URLSearchParams(prev);
         ["target", "q", "from", "to", "types", "sort", "important"].forEach(key => next.delete(key));
         return next;
-      });
+      }, { replace: true });
     }
     lastProjectIdRef.current = id;
   }, [currentProject?.id, setSearchParams]);
