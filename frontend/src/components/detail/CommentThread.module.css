@@ -188,12 +188,6 @@
   gap: 4px;
 }
 
-.previewNote {
-  margin-right: auto;
-  font-size: 11px;
-  font-style: italic;
-  color: var(--color-text-muted);
-}
 
 .editTextarea,
 .composerTextarea {

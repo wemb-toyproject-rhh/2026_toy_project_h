@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useProjects } from "../../context/ProjectContext.jsx";
 import { fetchComments, createComment, updateComment, deleteComment } from "../../services/commentApi.js";
@@ -16,7 +16,7 @@ function formatTimestamp(iso) {
 }
 
 export default function CommentThread({ entryId, onCountChange }) {
-  const { token, userId, userName } = useAuth();
+  const { token, userId } = useAuth();
   const { currentProject } = useProjects();
   const projectId = currentProject?.id ?? null;
 
@@ -36,18 +36,33 @@ export default function CommentThread({ entryId, onCountChange }) {
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // 대댓글 — 백엔드에 아직 부모 댓글 관계가 없어서, 실제로 저장되진 않고 이
-  // 화면을 보는 동안만 유지되는 로컬 미리보기입니다(새로고침하면 사라짐).
-  // parentCommentId -> 답글 배열.
-  const [localReplies, setLocalReplies] = useState({});
+  // 대댓글 — 1단계만 허용합니다(답글에 또 답글은 없음). 서버는 여전히 평평한
+  // 배열을 오래된순으로 돌려주므로, parentCommentId 기준으로 원댓글/답글을
+  // 여기서 나눠 묶습니다.
   const [replyingToId, setReplyingToId] = useState(null);
   const [replyDraft, setReplyDraft] = useState("");
+  const [replyPosting, setReplyPosting] = useState(false);
+  const [replyError, setReplyError] = useState("");
 
   useEffect(() => {
-    setLocalReplies({});
     setReplyingToId(null);
     setReplyDraft("");
+    setReplyError("");
   }, [entryId]);
+
+  const { topLevelComments, repliesByParent } = useMemo(() => {
+    const top = [];
+    const repliesMap = new Map();
+    for (const comment of comments) {
+      if (comment.parentCommentId == null) {
+        top.push(comment);
+      } else {
+        if (!repliesMap.has(comment.parentCommentId)) repliesMap.set(comment.parentCommentId, []);
+        repliesMap.get(comment.parentCommentId).push(comment);
+      }
+    }
+    return { topLevelComments: top, repliesByParent: repliesMap };
+  }, [comments]);
 
   const load = useCallback(() => {
     if (!token || !projectId || !entryId) {
@@ -121,7 +136,11 @@ export default function CommentThread({ entryId, onCountChange }) {
     setDeleting(true);
     try {
       await deleteComment(token, projectId, commentId);
-      setComments((prev) => prev.filter((c) => c.commentId !== commentId));
+      // 원댓글을 지우면 서버가 그 답글들도 같이 지우므로(ON DELETE CASCADE),
+      // 로컬 목록에서도 지운 댓글 본인 + 그 댓글을 부모로 둔 답글까지 같이 뺍니다.
+      setComments((prev) =>
+        prev.filter((c) => c.commentId !== commentId && c.parentCommentId !== commentId),
+      );
     } catch (err) {
       setError(err.message || "댓글 삭제에 실패했습니다");
     } finally {
@@ -132,36 +151,30 @@ export default function CommentThread({ entryId, onCountChange }) {
   const startReply = (commentId) => {
     setReplyingToId(commentId);
     setReplyDraft("");
+    setReplyError("");
   };
 
   const cancelReply = () => {
     setReplyingToId(null);
     setReplyDraft("");
+    setReplyError("");
   };
 
-  const submitReply = (parentCommentId) => {
+  const submitReply = async (parentCommentId) => {
     const content = replyDraft.trim();
     if (!content) return;
-    const reply = {
-      localId: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      userId,
-      userName,
-      content,
-      createdAt: new Date().toISOString(),
-    };
-    setLocalReplies((prev) => ({
-      ...prev,
-      [parentCommentId]: [...(prev[parentCommentId] ?? []), reply],
-    }));
-    setReplyingToId(null);
-    setReplyDraft("");
-  };
-
-  const deleteLocalReply = (parentCommentId, localId) => {
-    setLocalReplies((prev) => ({
-      ...prev,
-      [parentCommentId]: (prev[parentCommentId] ?? []).filter((reply) => reply.localId !== localId),
-    }));
+    setReplyPosting(true);
+    setReplyError("");
+    try {
+      const created = await createComment(token, projectId, entryId, content, parentCommentId);
+      setComments((prev) => [...prev, created]);
+      setReplyingToId(null);
+      setReplyDraft("");
+    } catch (err) {
+      setReplyError(err.message || "답글 작성에 실패했습니다");
+    } finally {
+      setReplyPosting(false);
+    }
   };
 
   return (
@@ -184,10 +197,11 @@ export default function CommentThread({ entryId, onCountChange }) {
       {!loading && !error && (
         <>
           <ul className={styles.list}>
-            {comments.length === 0 && <li className={styles.empty}>아직 댓글이 없습니다.</li>}
-            {comments.map((comment) => {
+            {topLevelComments.length === 0 && <li className={styles.empty}>아직 댓글이 없습니다.</li>}
+            {topLevelComments.map((comment) => {
               const isMine = comment.userId === userId;
               const isEditing = editingId === comment.commentId;
+              const replies = repliesByParent.get(comment.commentId) ?? [];
               return (
                 <li key={comment.commentId} className={styles.item}>
                   <div className={styles.itemHeader}>
@@ -265,32 +279,84 @@ export default function CommentThread({ entryId, onCountChange }) {
                     </div>
                   )}
 
-                  {((localReplies[comment.commentId]?.length ?? 0) > 0 ||
-                    replyingToId === comment.commentId) && (
+                  {(replies.length > 0 || replyingToId === comment.commentId) && (
                     <ul className={styles.replyList}>
-                      {(localReplies[comment.commentId] ?? []).map((reply) => (
-                        <li key={reply.localId} className={styles.replyItem}>
-                          <span className={styles.replyBranch} aria-hidden="true" />
-                          <div className={styles.replyBody}>
-                            <div className={styles.itemHeader}>
-                              <span className={styles.author}>{reply.userName || reply.userId}</span>
-                              <span className={styles.time}>{formatTimestamp(reply.createdAt)}</span>
-                              <div className={styles.itemActions}>
-                                <button
-                                  type="button"
-                                  className={styles.iconBtn}
-                                  aria-label="답글 삭제"
-                                  title="답글 삭제"
-                                  onClick={() => deleteLocalReply(comment.commentId, reply.localId)}
-                                >
-                                  <Icon name="trash" size={12} />
-                                </button>
+                      {replies.map((reply) => {
+                        const isReplyMine = reply.userId === userId;
+                        const isReplyEditing = editingId === reply.commentId;
+                        return (
+                          <li key={reply.commentId} className={styles.replyItem}>
+                            <span className={styles.replyBranch} aria-hidden="true" />
+                            <div className={styles.replyBody}>
+                              <div className={styles.itemHeader}>
+                                <span className={styles.author}>{reply.userName || reply.userId}</span>
+                                <span className={styles.time}>
+                                  {formatTimestamp(reply.createdAt)}
+                                  {reply.updatedAt !== reply.createdAt ? " (수정됨)" : ""}
+                                </span>
+                                {!isReplyEditing && (
+                                  <div className={styles.itemActions}>
+                                    {isReplyMine && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          className={styles.iconBtn}
+                                          aria-label="답글 수정"
+                                          title="답글 수정"
+                                          onClick={() => startEdit(reply)}
+                                        >
+                                          <Icon name="pencil" size={12} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className={styles.iconBtn}
+                                          aria-label="답글 삭제"
+                                          title="답글 삭제"
+                                          disabled={deleting}
+                                          onClick={() => setDeleteTargetId(reply.commentId)}
+                                        >
+                                          <Icon name="trash" size={12} />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
                               </div>
+
+                              {!isReplyEditing ? (
+                                <p className={styles.content}>{reply.content}</p>
+                              ) : (
+                                <div className={styles.editRow}>
+                                  <textarea
+                                    className={styles.editTextarea}
+                                    value={editDraft}
+                                    onChange={(e) => setEditDraft(e.target.value)}
+                                    maxLength={COMMENT_MAX}
+                                    readOnly={editSaving}
+                                  />
+                                  <div className={styles.editFooter}>
+                                    {editError && <span className={styles.error}>{editError}</span>}
+                                    <span className={styles.charCount}>
+                                      {editDraft.length}/{COMMENT_MAX}
+                                    </span>
+                                    <Button
+                                      variant="primary"
+                                      size="sm"
+                                      disabled={editSaving || !editDraft.trim()}
+                                      onClick={() => commitEdit(reply.commentId)}
+                                    >
+                                      {editSaving ? "저장 중..." : "저장"}
+                                    </Button>
+                                    <Button variant="ghost" size="sm" disabled={editSaving} onClick={cancelEdit}>
+                                      취소
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                            <p className={styles.content}>{reply.content}</p>
-                          </div>
-                        </li>
-                      ))}
+                          </li>
+                        );
+                      })}
 
                       {replyingToId === comment.commentId && (
                         <li className={styles.replyItem}>
@@ -302,24 +368,23 @@ export default function CommentThread({ entryId, onCountChange }) {
                               onChange={(e) => setReplyDraft(e.target.value)}
                               maxLength={COMMENT_MAX}
                               placeholder="답글을 입력하세요"
+                              readOnly={replyPosting}
                               autoFocus
                             />
                             <div className={styles.editFooter}>
-                              <span className={styles.previewNote}>
-                                미리보기 — 새로고침하면 사라집니다
-                              </span>
+                              {replyError && <span className={styles.error}>{replyError}</span>}
                               <span className={styles.charCount}>
                                 {replyDraft.length}/{COMMENT_MAX}
                               </span>
                               <Button
                                 variant="primary"
                                 size="sm"
-                                disabled={!replyDraft.trim()}
+                                disabled={replyPosting || !replyDraft.trim()}
                                 onClick={() => submitReply(comment.commentId)}
                               >
-                                작성
+                                {replyPosting ? "작성 중..." : "작성"}
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={cancelReply}>
+                              <Button variant="ghost" size="sm" disabled={replyPosting} onClick={cancelReply}>
                                 취소
                               </Button>
                             </div>
