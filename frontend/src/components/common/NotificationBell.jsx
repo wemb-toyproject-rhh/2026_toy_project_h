@@ -4,8 +4,6 @@ import { useHistoryOptional } from "../../context/HistoryContext.jsx";
 import Icon from "./Icon.jsx";
 import styles from "./NotificationBell.module.css";
 
-const MAX_ITEMS = 8;
-
 // 읽음/안읽음은 아직 백엔드에 없어서(추후 백엔드 팀원과 별도 설계 예정), 지금은
 // 세션 동안만 기억하는 lastSeenAt 기준으로 "새 이력"을 가립니다. HistoryContext의
 // newEntryIds가 같은 기준을 이력 리스트 쪽(PRCard)과도 공유해서, 알림에 뜬 항목이
@@ -41,11 +39,9 @@ export default function NotificationBell() {
     if (!entries || !newEntryIds || newEntryIds.size === 0) return [];
     return entries
       .filter((entry) => newEntryIds.has(entry.id))
-      .sort((a, b) => new Date(b.savedAtRaw) - new Date(a.savedAtRaw))
-      .slice(0, MAX_ITEMS);
+      .sort((a, b) => new Date(b.savedAtRaw) - new Date(a.savedAtRaw));
   }, [entries, newEntryIds]);
 
-  // 패널엔 최대 MAX_ITEMS개만 보여주지만, 뱃지 숫자는 실제 새 이력 전체 개수입니다.
   const unreadCount = newEntryIds?.size ?? 0;
 
   return (

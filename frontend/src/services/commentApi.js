@@ -20,12 +20,13 @@ export async function fetchComments(token, projectId, entryId) {
   return res.json();
 }
 
-// POST /api/history/:id/comments?projectId= — 댓글 작성. 작성자는 항상 토큰 주인입니다.
-export async function createComment(token, projectId, entryId, content) {
+// POST /api/history/:id/comments?projectId= — 댓글(또는 대댓글) 작성. 작성자는 항상
+// 토큰 주인입니다. parentCommentId를 넘기면 그 댓글에 대한 대댓글로 저장됩니다.
+export async function createComment(token, projectId, entryId, content, parentCommentId = null) {
   const res = await fetch(`${BASE}/${entryId}/comments?projectId=${encodeURIComponent(projectId)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, parentCommentId }),
   });
   if (!res.ok) throw await parseErrorResponse(res, "댓글 작성에 실패했습니다");
   return res.json();

@@ -6,6 +6,7 @@ import { changeNickname, changePassword, deleteAccount } from "../services/authA
 import Button from "../components/common/Button.jsx";
 import BackLink from "../components/common/BackLink.jsx";
 import PasswordInput from "../components/common/PasswordInput.jsx";
+import ConfirmDialog from "../components/common/ConfirmDialog.jsx";
 import styles from "./AccountSettingsPage.module.css";
 
 const PASSWORD_MIN = 4;
@@ -26,6 +27,7 @@ export default function AccountSettingsPage() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const handleNicknameSubmit = async (event) => {
     event.preventDefault();
@@ -98,7 +100,7 @@ export default function AccountSettingsPage() {
     navigate("/login");
   };
 
-  const handleDeleteAccount = async (event) => {
+  const handleDeleteAccount = (event) => {
     event.preventDefault();
     if (deleteSubmitting) return;
     setDeleteError("");
@@ -107,14 +109,11 @@ export default function AccountSettingsPage() {
       setDeleteError("비밀번호를 입력해 주세요");
       return;
     }
-    if (
-      !window.confirm(
-        "정말 계정을 삭제하시겠어요? 로그인이 즉시 차단되고, 연결된 프로젝트도 함께 비활성화됩니다.",
-      )
-    ) {
-      return;
-    }
+    setDeleteConfirmOpen(true);
+  };
 
+  const confirmDeleteAccount = async () => {
+    setDeleteConfirmOpen(false);
     setDeleteSubmitting(true);
     try {
       await deleteAccount(token, deletePassword);
@@ -256,6 +255,16 @@ export default function AccountSettingsPage() {
         </form>
         {deleteError && <p className={styles.error}>{deleteError}</p>}
       </section>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title="계정 삭제"
+        message="정말 계정을 삭제하시겠어요? 로그인이 즉시 차단되고, 연결된 프로젝트도 함께 비활성화됩니다."
+        confirmLabel="삭제"
+        danger
+        onConfirm={confirmDeleteAccount}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </div>
   );
 }
