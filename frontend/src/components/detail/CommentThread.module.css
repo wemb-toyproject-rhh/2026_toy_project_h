@@ -126,9 +126,73 @@
 
 .editRow,
 .composer {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.replyBtn {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.replyBtn:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.replyList {
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.replyItem {
+  display: flex;
+  gap: 6px;
+}
+
+.replyBranch {
+  position: relative;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.replyBranch::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: -6px;
+  width: 10px;
+  height: 18px;
+  border-left: 1px solid var(--color-border-strong);
+  border-bottom: 1px solid var(--color-border-strong);
+  border-radius: 0 0 0 6px;
+}
+
+.replyBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.previewNote {
+  margin-right: auto;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--color-text-muted);
 }
 
 .editTextarea,
