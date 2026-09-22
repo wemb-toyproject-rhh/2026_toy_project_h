@@ -39,13 +39,22 @@ export default function SignupPage() {
     setSubmitting(true);
     try {
       await register(userId, password);
+    } catch (err) {
+      setError(err.message || "회원가입에 실패했습니다");
+      setSubmitting(false);
+      return;
+    }
+
+    try {
       // 가입 직후 바로 로그인시켜서, 방금 입력한 정보를 또 치게 하지 않습니다.
       // 새로 만든 계정은 프로젝트가 하나도 없으니 바로 연결 화면으로 보냅니다.
       const { token, userId: loggedInUserId } = await login(userId, password);
       setAuth(token, loggedInUserId, null);
       navigate("/connect");
-    } catch (err) {
-      setError(err.message || "회원가입에 실패했습니다");
+    } catch {
+      // 계정 자체는 이미 만들어졌으니(register 성공) "회원가입 실패"로 보이면
+      // 안 됩니다 — 로그인 화면으로 보내서 직접 로그인하게 합니다.
+      navigate("/login", { state: { notice: "회원가입이 완료됐습니다. 로그인해 주세요.", userId } });
     } finally {
       setSubmitting(false);
     }

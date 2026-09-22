@@ -353,13 +353,15 @@
   background: rgba(var(--color-accent-rgb), 0.18);
 }
 
-.selectionBarWrap {
+.bottomStack {
   position: fixed;
   left: var(--sidebar-width);
   right: 0;
   bottom: 22px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   pointer-events: none;
   z-index: 20;
 }
@@ -421,17 +423,6 @@
   .undoToast {
     animation: none;
   }
-}
-
-.undoToastWrap {
-  position: fixed;
-  left: var(--sidebar-width);
-  right: 0;
-  bottom: 22px;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 20;
 }
 
 .undoToast {

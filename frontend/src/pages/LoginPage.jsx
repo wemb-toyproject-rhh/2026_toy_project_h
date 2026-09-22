@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Button from "../components/common/Button.jsx";
 import PasswordInput from "../components/common/PasswordInput.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -9,17 +9,20 @@ import styles from "./LoginPage.module.css";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login: setAuth } = useAuth();
 
-  const [userId, setUserId] = useState("");
+  const [userId, setUserId] = useState(location.state?.userId ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState(location.state?.notice ?? "");
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (submitting) return;
     setError("");
+    setNotice("");
     setSubmitting(true);
     try {
       const { token, userId: loggedInUserId, projectRecent, userName } = await login(userId, password);
@@ -45,6 +48,8 @@ export default function LoginPage() {
         <span className={styles.brand}>RHH</span>
         <h1 className={styles.title}>RENOBIT History Hub</h1>
         <p className={styles.subtitle}>계정으로 로그인하세요</p>
+
+        {notice && !error && <p className={styles.notice}>{notice}</p>}
 
         {error && (
           <p className={styles.error}>
