@@ -449,48 +449,48 @@ export default function HistoryListPage() {
         </div>
       )}
 
-      {selectedIds.length > 0 && (
-        <div className={styles.selectionBarWrap}>
-          <div className={styles.selectionBar}>
-            <span className={styles.selectionCount}>
-              {selectedIds.length}개 선택됨 · 비교하려면 2개를 선택하세요
-            </span>
-            <Button
-              variant="primary"
-              disabled={!canCompare}
-              onClick={() =>
-                navigate("/compare", { state: { ids: selectedIds } })
-              }
-            >
-              Diff 비교 ({selectedIds.length}/2)
-            </Button>
-            <button
-              type="button"
-              className={styles.selectionClear}
-              onClick={clearSelection}
-              aria-label="선택 취소"
-              title="선택 취소"
-            >
-              <Icon name="close" size={12} />
-            </button>
-          </div>
-        </div>
-      )}
+      {(selectedIds.length > 0 || pendingHideIds.length > 0) && (
+        <div className={styles.bottomStack}>
+          {pendingHideIds.length > 0 && (
+            <div className={styles.undoToast}>
+              <span className={styles.undoToastText}>
+                이력 {pendingHideIds.length}개를 삭제했습니다
+              </span>
+              <button
+                type="button"
+                className={styles.undoToastAction}
+                onClick={handleUndoHide}
+              >
+                실행 취소
+              </button>
+            </div>
+          )}
 
-      {pendingHideIds.length > 0 && (
-        <div className={styles.undoToastWrap}>
-          <div className={styles.undoToast}>
-            <span className={styles.undoToastText}>
-              이력 {pendingHideIds.length}개를 삭제했습니다
-            </span>
-            <button
-              type="button"
-              className={styles.undoToastAction}
-              onClick={handleUndoHide}
-            >
-              실행 취소
-            </button>
-          </div>
+          {selectedIds.length > 0 && (
+            <div className={styles.selectionBar}>
+              <span className={styles.selectionCount}>
+                {selectedIds.length}개 선택됨 · 비교하려면 2개를 선택하세요
+              </span>
+              <Button
+                variant="primary"
+                disabled={!canCompare}
+                onClick={() =>
+                  navigate("/compare", { state: { ids: selectedIds } })
+                }
+              >
+                Diff 비교 ({selectedIds.length}/2)
+              </Button>
+              <button
+                type="button"
+                className={styles.selectionClear}
+                onClick={clearSelection}
+                aria-label="선택 취소"
+                title="선택 취소"
+              >
+                <Icon name="close" size={12} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
