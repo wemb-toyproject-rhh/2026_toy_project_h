@@ -34,7 +34,9 @@ export default function Header({ hideProjectSwitcher = false }) {
       </div>
       <div className={styles.actionCol}>
         <div className={styles.userGroup}>
-          <span className={styles.user}>{userName || userId || "-"}</span>
+          <span className={styles.user} title={userName || userId || "-"}>
+            {userName || userId || "-"}
+          </span>
           <Link to="/account" className={styles.settingsBtn} aria-label="계정 설정" title="계정 설정">
             <Icon name="settings" size={15} />
           </Link>
