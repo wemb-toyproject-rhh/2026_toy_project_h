@@ -41,6 +41,9 @@ export default function HistoryListPage() {
 
   // Filter/sort criteria live in the URL (not local state) so they survive
   // navigating to a detail/compare page and back via BackLink or browser back.
+  // replace: true — 필터/검색을 조작할 때마다 히스토리에 쌓이면, 뒤로가기가
+  // 이전 화면이 아니라 한 글자 전 검색어로 돌아가는 식이 되어버립니다. 그래서
+  // 같은 자리(현재 항목)를 계속 덮어씁니다.
   const updateParams = updates => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
@@ -49,7 +52,7 @@ export default function HistoryListPage() {
         else next.set(key, value);
       });
       return next;
-    });
+    }, { replace: true });
   };
 
   // 프로젝트를 바꾸면 이전 프로젝트에서 체크해둔 선택/필터/정렬을 이어가면 안 됩니다 —
@@ -68,7 +71,7 @@ export default function HistoryListPage() {
         const next = new URLSearchParams(prev);
         ["target", "q", "from", "to", "types", "sort", "important"].forEach(key => next.delete(key));
         return next;
-      });
+      }, { replace: true });
     }
     lastProjectIdRef.current = id;
   }, [currentProject?.id, setSearchParams]);
@@ -446,48 +449,48 @@ export default function HistoryListPage() {
         </div>
       )}
 
-      {selectedIds.length > 0 && (
-        <div className={styles.selectionBarWrap}>
-          <div className={styles.selectionBar}>
-            <span className={styles.selectionCount}>
-              {selectedIds.length}개 선택됨 · 비교하려면 2개를 선택하세요
-            </span>
-            <Button
-              variant="primary"
-              disabled={!canCompare}
-              onClick={() =>
-                navigate("/compare", { state: { ids: selectedIds } })
-              }
-            >
-              Diff 비교 ({selectedIds.length}/2)
-            </Button>
-            <button
-              type="button"
-              className={styles.selectionClear}
-              onClick={clearSelection}
-              aria-label="선택 취소"
-              title="선택 취소"
-            >
-              <Icon name="close" size={12} />
-            </button>
-          </div>
-        </div>
-      )}
+      {(selectedIds.length > 0 || pendingHideIds.length > 0) && (
+        <div className={styles.bottomStack}>
+          {pendingHideIds.length > 0 && (
+            <div className={styles.undoToast}>
+              <span className={styles.undoToastText}>
+                이력 {pendingHideIds.length}개를 삭제했습니다
+              </span>
+              <button
+                type="button"
+                className={styles.undoToastAction}
+                onClick={handleUndoHide}
+              >
+                실행 취소
+              </button>
+            </div>
+          )}
 
-      {pendingHideIds.length > 0 && (
-        <div className={styles.undoToastWrap}>
-          <div className={styles.undoToast}>
-            <span className={styles.undoToastText}>
-              이력 {pendingHideIds.length}개를 삭제했습니다
-            </span>
-            <button
-              type="button"
-              className={styles.undoToastAction}
-              onClick={handleUndoHide}
-            >
-              실행 취소
-            </button>
-          </div>
+          {selectedIds.length > 0 && (
+            <div className={styles.selectionBar}>
+              <span className={styles.selectionCount}>
+                {selectedIds.length}개 선택됨 · 비교하려면 2개를 선택하세요
+              </span>
+              <Button
+                variant="primary"
+                disabled={!canCompare}
+                onClick={() =>
+                  navigate("/compare", { state: { ids: selectedIds } })
+                }
+              >
+                Diff 비교 ({selectedIds.length}/2)
+              </Button>
+              <button
+                type="button"
+                className={styles.selectionClear}
+                onClick={clearSelection}
+                aria-label="선택 취소"
+                title="선택 취소"
+              >
+                <Icon name="close" size={12} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
