@@ -238,12 +238,16 @@ const INSTALL_ITEMS = [
   {
     key: "tb_history_comment",
     label: "테이블 tb_history_comment",
-    statements: [
-      SQL_TB_HISTORY_COMMENT,
-      SQL_ALTER_HISTORY_COMMENT_PARENT,
-      SQL_IDX_HISTORY_COMMENT,
-      SQL_IDX_HISTORY_COMMENT_PARENT,
-    ],
+    statements: [SQL_TB_HISTORY_COMMENT, SQL_IDX_HISTORY_COMMENT],
+  },
+  // 테이블 자체는 있는데 대댓글 컬럼만 없는(=예전에 설치된) 경우를 위해 별도 항목으로
+  // 뺐습니다. key가 projectPool.js의 COLUMN_CHECKS와 맞물려서, "테이블은 있지만 이
+  // 컬럼만 없는" 상태에서도 이 항목만 골라 실행됩니다(위 tb_history_comment 항목은
+  // 테이블이 이미 있으면 통째로 건너뛰기 때문에 이 컬럼까지는 못 챙깁니다).
+  {
+    key: "tb_history_comment_reply",
+    label: "컬럼 tb_history_comment.parent_comment_id (대댓글)",
+    statements: [SQL_ALTER_HISTORY_COMMENT_PARENT, SQL_IDX_HISTORY_COMMENT_PARENT],
   },
   {
     key: "trg_tb_page_hist",
